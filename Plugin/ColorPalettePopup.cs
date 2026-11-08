@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -116,8 +117,10 @@ namespace KingdomBottleneckHeatmap
     {
         static ColorPalettePopup _instance;
 
+        BottleneckState _currentState = BottleneckState.Running;
+
         // Current base color in HSV
-        float _baseHue = 0.38f;        // Default green (~137 deg)
+        float _baseHue = 0.38f;
         float _baseSaturation = 0.85f;
         float _baseValue = 0.98f;
 
@@ -126,25 +129,25 @@ namespace KingdomBottleneckHeatmap
         PickerSurface _hueSurface;
         Image _baseColorPreview;
         TMP_Text _baseHexText;
+        TMP_Text _headerSubtitle;
+        TMP_Text _variationsTitle;
+        Button _applyButton;
 
-        // 5 Auto-generated state previews
-        Image _runningSwatch;
-        TMP_Text _runningHex;
-        Image _starvedSwatch;
-        TMP_Text _starvedHex;
-        Image _cloggedSwatch;
-        TMP_Text _cloggedHex;
-        Image _fullStorageSwatch;
-        TMP_Text _fullStorageHex;
-        Image _idleSwatch;
-        TMP_Text _idleHex;
+        // Tab buttons
+        Button _tabRunning, _tabStarved, _tabClogged, _tabFullStorage, _tabIdle;
 
-        // Computed colors
-        Color _compRunning;
-        Color _compStarved;
-        Color _compClogged;
-        Color _compFullStorage;
-        Color _compIdle;
+        // 5 Variation Cards
+        struct VariationCard
+        {
+            public GameObject Root;
+            public Image Swatch;
+            public TMP_Text Title;
+            public TMP_Text Hex;
+            public Color Color;
+        }
+
+        readonly VariationCard[] _cards = new VariationCard[5];
+        (string Label, string Hex)[] _currentGeneratedVariations;
 
         static readonly string[] Presets = new string[]
         {
@@ -152,7 +155,7 @@ namespace KingdomBottleneckHeatmap
             "B042FF", "DF2BFF", "FF2B85", "FF3842", "FFD92E"
         };
 
-        public static void Open()
+        public static void Open(BottleneckState targetState = BottleneckState.Running)
         {
             if (!_instance)
             {
@@ -166,7 +169,7 @@ namespace KingdomBottleneckHeatmap
 
             _instance.gameObject.SetActive(true);
             _instance.transform.SetAsLastSibling();
-            _instance.InitializeFromCurrentColors();
+            _instance.SelectState(targetState);
         }
 
         public static void Close()
@@ -190,19 +193,70 @@ namespace KingdomBottleneckHeatmap
             }
         }
 
-        void InitializeFromCurrentColors()
+        public void SelectState(BottleneckState state)
         {
+            _currentState = state;
             var plugin = BottleneckHeatmapPlugin.Instance;
+            Color curColor = Color.green;
+
             if (plugin != null)
             {
-                Color run = HeatmapMaterials.RunningColor;
-                Color.RGBToHSV(run, out _baseHue, out _baseSaturation, out _baseValue);
-                if (_baseSaturation < 0.4f) _baseSaturation = 0.85f;
-                if (_baseValue < 0.5f) _baseValue = 0.98f;
+                string hex = state switch
+                {
+                    BottleneckState.Running => plugin.RunningColorConfig.Value,
+                    BottleneckState.Starved => plugin.StarvedColorConfig.Value,
+                    BottleneckState.Clogged => plugin.CloggedColorConfig.Value,
+                    BottleneckState.FullStorage => plugin.FullStorageColorConfig.Value,
+                    BottleneckState.Idle => plugin.IdleColorConfig.Value,
+                    _ => "#26FA73"
+                };
+                ColorUtility.TryParseHtmlString(hex, out curColor);
             }
 
+            Color.RGBToHSV(curColor, out _baseHue, out _baseSaturation, out _baseValue);
+            if (_baseSaturation < 0.2f && state != BottleneckState.Idle) _baseSaturation = 0.85f;
+            if (_baseValue < 0.4f) _baseValue = 0.95f;
+
+            UpdateTabsVisuals();
             UpdateSurfaces();
-            UpdateGeneratedColors();
+            UpdateGeneratedVariations();
+
+            string stateName = GetStateDisplayName(_currentState);
+            if (_headerSubtitle) _headerSubtitle.text = $"Select base color for <color=yellow>{stateName}</color> to auto-generate slight variation hues";
+            if (_variationsTitle) _variationsTitle.text = $"Auto-Generated Surrounding Hues for {stateName}:";
+            if (_applyButton)
+            {
+                var tmp = _applyButton.GetComponentInChildren<TMP_Text>(true);
+                if (tmp) tmp.text = $"Apply to {stateName}";
+            }
+        }
+
+        string GetStateDisplayName(BottleneckState state) => state switch
+        {
+            BottleneckState.Running => "Running",
+            BottleneckState.Starved => "Starved",
+            BottleneckState.Clogged => "Clogged",
+            BottleneckState.FullStorage => "Full Storage",
+            BottleneckState.Idle => "Idle",
+            _ => state.ToString()
+        };
+
+        void UpdateTabsVisuals()
+        {
+            SetTabActive(_tabRunning, _currentState == BottleneckState.Running);
+            SetTabActive(_tabStarved, _currentState == BottleneckState.Starved);
+            SetTabActive(_tabClogged, _currentState == BottleneckState.Clogged);
+            SetTabActive(_tabFullStorage, _currentState == BottleneckState.FullStorage);
+            SetTabActive(_tabIdle, _currentState == BottleneckState.Idle);
+        }
+
+        void SetTabActive(Button tab, bool active)
+        {
+            if (!tab) return;
+            var img = tab.GetComponent<Image>();
+            if (img) img.color = active ? new Color(0.35f, 0.32f, 0.25f, 1f) : new Color(0.18f, 0.17f, 0.20f, 0.95f);
+            var text = tab.GetComponentInChildren<TMP_Text>(true);
+            if (text) text.color = active ? Color.yellow : new Color(0.75f, 0.72f, 0.68f);
         }
 
         void UpdateSurfaces()
@@ -222,56 +276,68 @@ namespace KingdomBottleneckHeatmap
             }
         }
 
-        void UpdateGeneratedColors()
+        void UpdateGeneratedVariations()
         {
-            // 1. Running: base color chosen by user
-            _compRunning = Color.HSVToRGB(_baseHue, Mathf.Clamp01(_baseSaturation), Mathf.Clamp01(_baseValue));
+            Color baseColor = Color.HSVToRGB(_baseHue, Mathf.Clamp01(_baseSaturation), Mathf.Clamp01(_baseValue));
+            if (_baseColorPreview) _baseColorPreview.color = baseColor;
+            if (_baseHexText) _baseHexText.text = "#" + ColorUtility.ToHtmlStringRGB(baseColor);
 
-            // 2. Starved: analogous warm neighbor (-44 deg on wheel)
-            float starvedHue = (_baseHue - 0.12f + 1f) % 1f;
-            _compStarved = Color.HSVToRGB(starvedHue, Mathf.Clamp01(_baseSaturation * 0.92f), 1f);
+            string stateName = GetStateDisplayName(_currentState);
+            _currentGeneratedVariations = FoundationIntegration.GenerateVariations(baseColor, stateName);
 
-            // 3. Clogged: contrasting alert complement (+155 deg on wheel)
-            float cloggedHue = (_baseHue + 0.43f) % 1f;
-            _compClogged = Color.HSVToRGB(cloggedHue, 0.92f, 1f);
-
-            // 4. Full Storage: triadic accent (+100 deg on wheel)
-            float fullHue = (_baseHue + 0.28f) % 1f;
-            _compFullStorage = Color.HSVToRGB(fullHue, 0.85f, 1f);
-
-            // 5. Idle: desaturated harmonious tint
-            _compIdle = Color.HSVToRGB(_baseHue, 0.22f, 0.65f);
-
-            // Update UI preview
-            if (_baseColorPreview) _baseColorPreview.color = _compRunning;
-            if (_baseHexText) _baseHexText.text = "#" + ColorUtility.ToHtmlStringRGB(_compRunning);
-
-            if (_runningSwatch) _runningSwatch.color = _compRunning;
-            if (_runningHex) _runningHex.text = "#" + ColorUtility.ToHtmlStringRGB(_compRunning);
-
-            if (_starvedSwatch) _starvedSwatch.color = _compStarved;
-            if (_starvedHex) _starvedHex.text = "#" + ColorUtility.ToHtmlStringRGB(_compStarved);
-
-            if (_cloggedSwatch) _cloggedSwatch.color = _compClogged;
-            if (_cloggedHex) _cloggedHex.text = "#" + ColorUtility.ToHtmlStringRGB(_compClogged);
-
-            if (_fullStorageSwatch) _fullStorageSwatch.color = _compFullStorage;
-            if (_fullStorageHex) _fullStorageHex.text = "#" + ColorUtility.ToHtmlStringRGB(_compFullStorage);
-
-            if (_idleSwatch) _idleSwatch.color = _compIdle;
-            if (_idleHex) _idleHex.text = "#" + ColorUtility.ToHtmlStringRGB(_compIdle);
+            string[] cardTitles = { "Selected Base", "Warm Tone", "Cool Tone", "Bright Tone", "Deep Tone" };
+            for (int i = 0; i < _cards.Length && i < _currentGeneratedVariations.Length; i++)
+            {
+                ColorUtility.TryParseHtmlString(_currentGeneratedVariations[i].Hex, out var col);
+                SetCard(i, cardTitles[i], col, _currentGeneratedVariations[i].Hex);
+            }
         }
 
-        void ApplyPalette()
+        void SetCard(int idx, string title, Color col, string hex)
+        {
+            if (idx >= _cards.Length) return;
+            _cards[idx].Color = col;
+            if (_cards[idx].Swatch) _cards[idx].Swatch.color = col;
+            if (_cards[idx].Title) _cards[idx].Title.text = title;
+            if (_cards[idx].Hex) _cards[idx].Hex.text = hex;
+        }
+
+        void ApplyCurrentColor()
         {
             var plugin = BottleneckHeatmapPlugin.Instance;
             if (plugin != null)
             {
-                plugin.RunningColorConfig.Value = "#" + ColorUtility.ToHtmlStringRGB(_compRunning);
-                plugin.StarvedColorConfig.Value = "#" + ColorUtility.ToHtmlStringRGB(_compStarved);
-                plugin.CloggedColorConfig.Value = "#" + ColorUtility.ToHtmlStringRGB(_compClogged);
-                plugin.FullStorageColorConfig.Value = "#" + ColorUtility.ToHtmlStringRGB(_compFullStorage);
-                plugin.IdleColorConfig.Value = "#" + ColorUtility.ToHtmlStringRGB(_compIdle);
+                Color baseColor = Color.HSVToRGB(_baseHue, Mathf.Clamp01(_baseSaturation), Mathf.Clamp01(_baseValue));
+                string hex = "#" + ColorUtility.ToHtmlStringRGB(baseColor);
+
+                switch (_currentState)
+                {
+                    case BottleneckState.Running:
+                        plugin.RunningColorConfig.Value = hex;
+                        FoundationIntegration.RunningVariations = _currentGeneratedVariations;
+                        FoundationIntegration.UpdateDropdownOptions(BottleneckState.Running, _currentGeneratedVariations);
+                        break;
+                    case BottleneckState.Starved:
+                        plugin.StarvedColorConfig.Value = hex;
+                        FoundationIntegration.StarvedVariations = _currentGeneratedVariations;
+                        FoundationIntegration.UpdateDropdownOptions(BottleneckState.Starved, _currentGeneratedVariations);
+                        break;
+                    case BottleneckState.Clogged:
+                        plugin.CloggedColorConfig.Value = hex;
+                        FoundationIntegration.CloggedVariations = _currentGeneratedVariations;
+                        FoundationIntegration.UpdateDropdownOptions(BottleneckState.Clogged, _currentGeneratedVariations);
+                        break;
+                    case BottleneckState.FullStorage:
+                        plugin.FullStorageColorConfig.Value = hex;
+                        FoundationIntegration.FullStorageVariations = _currentGeneratedVariations;
+                        FoundationIntegration.UpdateDropdownOptions(BottleneckState.FullStorage, _currentGeneratedVariations);
+                        break;
+                    case BottleneckState.Idle:
+                        plugin.IdleColorConfig.Value = hex;
+                        FoundationIntegration.IdleVariations = _currentGeneratedVariations;
+                        FoundationIntegration.UpdateDropdownOptions(BottleneckState.Idle, _currentGeneratedVariations);
+                        break;
+                }
 
                 plugin.Config.Save();
                 plugin.UpdateMaterialColors();
@@ -279,18 +345,15 @@ namespace KingdomBottleneckHeatmap
 
                 try
                 {
+                    string stateName = GetStateDisplayName(_currentState);
                     var msg = Assets.Behaviour.UI.UIStatusMessage.Show(
-                        "Bottleneck Heatmap: Palette Applied",
+                        $"Bottleneck Heatmap: Updated {stateName} Color",
                         "Icons_17",
                         false
                     );
                     if (msg != null && msg.StatusText != null)
                     {
-                        string rHex = plugin.RunningColorConfig.Value;
-                        string sHex = plugin.StarvedColorConfig.Value;
-                        string cHex = plugin.CloggedColorConfig.Value;
-                        string fHex = plugin.FullStorageColorConfig.Value;
-                        msg.StatusText.text = $"Bottleneck Heatmap: Palette Applied (<color={rHex}>Running</color>  <color={sHex}>Starved</color>  <color={cHex}>Clogged</color>  <color={fHex}>Full</color>)";
+                        msg.StatusText.text = $"Bottleneck Heatmap: Updated {stateName} (<color={hex}>{hex}</color>)";
                     }
                 }
                 catch { }
@@ -299,23 +362,27 @@ namespace KingdomBottleneckHeatmap
             Close();
         }
 
-        void ResetDefaults()
+        void ResetStateDefault()
         {
             var plugin = BottleneckHeatmapPlugin.Instance;
             if (plugin != null)
             {
-                plugin.RunningColorConfig.Value = "#26FA73";
-                plugin.StarvedColorConfig.Value = "#FFD92E";
-                plugin.CloggedColorConfig.Value = "#FF3842";
-                plugin.FullStorageColorConfig.Value = "#B042FF";
-                plugin.IdleColorConfig.Value = "#8C9EB8";
+                string defHex = _currentState switch
+                {
+                    BottleneckState.Running => "#26FA73",
+                    BottleneckState.Starved => "#FFD92E",
+                    BottleneckState.Clogged => "#FF3842",
+                    BottleneckState.FullStorage => "#B042FF",
+                    BottleneckState.Idle => "#8C9EB8",
+                    _ => "#26FA73"
+                };
 
-                plugin.Config.Save();
-                plugin.UpdateMaterialColors();
-                plugin.RefreshAllOverlays();
+                ColorUtility.TryParseHtmlString(defHex, out var defColor);
+                Color.RGBToHSV(defColor, out _baseHue, out _baseSaturation, out _baseValue);
+                UpdateSurfaces();
+                UpdateGeneratedVariations();
+                ApplyCurrentColor();
             }
-
-            InitializeFromCurrentColors();
         }
 
         void BuildUI()
@@ -346,7 +413,7 @@ namespace KingdomBottleneckHeatmap
             dRt.anchorMin = new Vector2(0.5f, 0.5f);
             dRt.anchorMax = new Vector2(0.5f, 0.5f);
             dRt.pivot = new Vector2(0.5f, 0.5f);
-            dRt.sizeDelta = new Vector2(580f, 440f);
+            dRt.sizeDelta = new Vector2(600f, 460f);
             var dImg = dialog.GetComponent<Image>();
             dImg.color = new Color(0.12f, 0.11f, 0.14f, 0.98f);
 
@@ -363,15 +430,24 @@ namespace KingdomBottleneckHeatmap
             border.transform.SetAsFirstSibling();
 
             // Header Title
-            CreateText(dialog.transform, "Title", "Heatmap Palette Generator", new Vector2(24, -18), new Vector2(400, 26), 18, Color.yellow, FontStyles.Bold);
-            CreateText(dialog.transform, "Subtitle", "Pick a base color to auto-generate harmonized bottleneck hues", new Vector2(24, -42), new Vector2(480, 20), 12, new Color(0.75f, 0.72f, 0.65f), FontStyles.Normal);
+            CreateText(dialog.transform, "Title", "Heatmap Color Variations Generator", new Vector2(24, -16), new Vector2(400, 26), 18, Color.yellow, FontStyles.Bold);
+            _headerSubtitle = CreateText(dialog.transform, "Subtitle", "Select base color to auto-generate slight variation hues", new Vector2(24, -40), new Vector2(500, 20), 12, new Color(0.75f, 0.72f, 0.65f), FontStyles.Normal);
 
             // Close button [X]
-            CreateButton(dialog.transform, "CloseBtn", "X", new Vector2(534, -18), new Vector2(28, 28), new Color(0.25f, 0.20f, 0.20f), Color.white, Close);
+            CreateButton(dialog.transform, "CloseBtn", "X", new Vector2(550, -16), new Vector2(28, 28), new Color(0.25f, 0.20f, 0.20f), Color.white, Close);
 
-            // Section 1: Color Picker Surface
-            CreateText(dialog.transform, "PickerLabel", "1. Pick Base Color:", new Vector2(24, -68), new Vector2(200, 18), 13, Color.white, FontStyles.Bold);
+            // State Selection Tabs
+            float tabStartX = 24f;
+            float tabWidth = 106f;
+            float tabY = -66f;
 
+            _tabRunning = CreateTabButton(dialog.transform, "Tab_Running", "Running", new Vector2(tabStartX + 0 * (tabWidth + 4), tabY), new Vector2(tabWidth, 26), () => SelectState(BottleneckState.Running));
+            _tabStarved = CreateTabButton(dialog.transform, "Tab_Starved", "Starved", new Vector2(tabStartX + 1 * (tabWidth + 4), tabY), new Vector2(tabWidth, 26), () => SelectState(BottleneckState.Starved));
+            _tabClogged = CreateTabButton(dialog.transform, "Tab_Clogged", "Clogged", new Vector2(tabStartX + 2 * (tabWidth + 4), tabY), new Vector2(tabWidth, 26), () => SelectState(BottleneckState.Clogged));
+            _tabFullStorage = CreateTabButton(dialog.transform, "Tab_Full", "Full Storage", new Vector2(tabStartX + 3 * (tabWidth + 4), tabY), new Vector2(tabWidth, 26), () => SelectState(BottleneckState.FullStorage));
+            _tabIdle = CreateTabButton(dialog.transform, "Tab_Idle", "Idle", new Vector2(tabStartX + 4 * (tabWidth + 4), tabY), new Vector2(tabWidth, 26), () => SelectState(BottleneckState.Idle));
+
+            // Color Picker Area
             // SV Surface (210 x 110)
             var svObj = new GameObject("SVSurface", typeof(RectTransform), typeof(PickerSurface));
             svObj.transform.SetParent(dialog.transform, false);
@@ -379,7 +455,7 @@ namespace KingdomBottleneckHeatmap
             svRt.anchorMin = new Vector2(0f, 1f);
             svRt.anchorMax = new Vector2(0f, 1f);
             svRt.pivot = new Vector2(0f, 1f);
-            svRt.anchoredPosition = new Vector2(24, -90);
+            svRt.anchoredPosition = new Vector2(24, -100);
             svRt.sizeDelta = new Vector2(210, 110);
             _svSurface = svObj.GetComponent<PickerSurface>();
             _svSurface.Mode = PickerMode.SaturationValue;
@@ -388,7 +464,7 @@ namespace KingdomBottleneckHeatmap
                 _baseSaturation = p.x;
                 _baseValue = p.y;
                 UpdateSurfaces();
-                UpdateGeneratedColors();
+                UpdateGeneratedVariations();
             };
 
             // Hue Strip (24 x 110)
@@ -398,7 +474,7 @@ namespace KingdomBottleneckHeatmap
             hueRt.anchorMin = new Vector2(0f, 1f);
             hueRt.anchorMax = new Vector2(0f, 1f);
             hueRt.pivot = new Vector2(0f, 1f);
-            hueRt.anchoredPosition = new Vector2(244, -90);
+            hueRt.anchoredPosition = new Vector2(244, -100);
             hueRt.sizeDelta = new Vector2(24, 110);
             _hueSurface = hueObj.GetComponent<PickerSurface>();
             _hueSurface.Mode = PickerMode.Hue;
@@ -406,7 +482,7 @@ namespace KingdomBottleneckHeatmap
             {
                 _baseHue = 1f - p.y;
                 UpdateSurfaces();
-                UpdateGeneratedColors();
+                UpdateGeneratedVariations();
             };
 
             // Selected Base Color Preview Box
@@ -416,80 +492,108 @@ namespace KingdomBottleneckHeatmap
             bpRt.anchorMin = new Vector2(0f, 1f);
             bpRt.anchorMax = new Vector2(0f, 1f);
             bpRt.pivot = new Vector2(0f, 1f);
-            bpRt.anchoredPosition = new Vector2(280, -90);
+            bpRt.anchoredPosition = new Vector2(280, -100);
             bpRt.sizeDelta = new Vector2(50, 48);
             _baseColorPreview = basePrevObj.GetComponent<Image>();
             _baseColorPreview.color = Color.green;
 
-            _baseHexText = CreateText(dialog.transform, "BaseHex", "#26FA73", new Vector2(280, -144), new Vector2(60, 20), 12, Color.white, FontStyles.Bold, TextAlignmentOptions.Left);
+            _baseHexText = CreateText(dialog.transform, "BaseHex", "#26FA73", new Vector2(280, -154), new Vector2(60, 20), 12, Color.white, FontStyles.Bold, TextAlignmentOptions.Left);
 
-            // Presets Swatches Grid
-            CreateText(dialog.transform, "PresetsLabel", "Presets:", new Vector2(350, -68), new Vector2(100, 18), 12, Color.white, FontStyles.Bold);
+            // Quick Presets
+            CreateText(dialog.transform, "PresetsLabel", "Quick Presets:", new Vector2(350, -100), new Vector2(100, 16), 11, Color.white, FontStyles.Bold);
 
             float pX = 350f;
-            float pY = -90f;
+            float pY = -120f;
             for (int i = 0; i < Presets.Length; i++)
             {
                 string hex = Presets[i];
                 ColorUtility.TryParseHtmlString("#" + hex, out var pColor);
-                CreateColorButton(dialog.transform, $"Preset_{hex}", pColor, new Vector2(pX + (i % 5) * 42f, pY - (i / 5) * 32f), new Vector2(36f, 26f), () =>
+                CreateColorButton(dialog.transform, $"Preset_{hex}", pColor, new Vector2(pX + (i % 5) * 44f, pY - (i / 5) * 32f), new Vector2(38f, 26f), () =>
                 {
                     Color.RGBToHSV(pColor, out _baseHue, out _baseSaturation, out _baseValue);
                     UpdateSurfaces();
-                    UpdateGeneratedColors();
+                    UpdateGeneratedVariations();
                 });
             }
 
-            // Section 2: Auto-Generated Palette Cards
-            CreateText(dialog.transform, "GenLabel", "2. Auto-Harmonized Hues for Heatmap States:", new Vector2(24, -212), new Vector2(400, 20), 13, Color.yellow, FontStyles.Bold);
+            // Section 2: Surrounding Hues Cards (Slight Variations)
+            _variationsTitle = CreateText(dialog.transform, "VariationsLabel", "Auto-Generated Surrounding Hues:", new Vector2(24, -226), new Vector2(480, 20), 13, Color.yellow, FontStyles.Bold);
 
             float cardStartX = 24f;
-            float cardSpacing = 108f;
-            float cardY = -236f;
+            float cardSpacing = 112f;
+            float cardY = -250f;
 
-            CreateStateCard(dialog.transform, "Card_Running", "Running", "Active line", new Vector2(cardStartX + 0 * cardSpacing, cardY), out _runningSwatch, out _runningHex);
-            CreateStateCard(dialog.transform, "Card_Starved", "Starved", "Waiting input", new Vector2(cardStartX + 1 * cardSpacing, cardY), out _starvedSwatch, out _starvedHex);
-            CreateStateCard(dialog.transform, "Card_Clogged", "Clogged", "Blocked pipe", new Vector2(cardStartX + 2 * cardSpacing, cardY), out _cloggedSwatch, out _cloggedHex);
-            CreateStateCard(dialog.transform, "Card_Full", "Full Storage", "Containers", new Vector2(cardStartX + 3 * cardSpacing, cardY), out _fullStorageSwatch, out _fullStorageHex);
-            CreateStateCard(dialog.transform, "Card_Idle", "Idle", "Dormant", new Vector2(cardStartX + 4 * cardSpacing, cardY), out _idleSwatch, out _idleHex);
+            for (int i = 0; i < 5; i++)
+            {
+                int cardIdx = i;
+                CreateVariationCard(dialog.transform, $"VarCard_{i}", new Vector2(cardStartX + i * cardSpacing, cardY), out _cards[i], () =>
+                {
+                    // Clicking a card adopts that variation as the base!
+                    Color.RGBToHSV(_cards[cardIdx].Color, out _baseHue, out _baseSaturation, out _baseValue);
+                    UpdateSurfaces();
+                    UpdateGeneratedVariations();
+                });
+            }
 
             // Section 3: Bottom Action Buttons
-            CreateButton(dialog.transform, "ApplyBtn", "Apply Palette", new Vector2(24, -394), new Vector2(170, 34), new Color(0.20f, 0.48f, 0.28f), Color.white, ApplyPalette);
-            CreateButton(dialog.transform, "ResetBtn", "Reset Defaults", new Vector2(210, -394), new Vector2(160, 34), new Color(0.28f, 0.28f, 0.32f), Color.white, ResetDefaults);
-            CreateButton(dialog.transform, "CancelBtn", "Cancel", new Vector2(386, -394), new Vector2(170, 34), new Color(0.25f, 0.20f, 0.20f), Color.white, Close);
+            _applyButton = CreateButton(dialog.transform, "ApplyBtn", "Apply to State", new Vector2(24, -412), new Vector2(180, 34), new Color(0.20f, 0.48f, 0.28f), Color.white, ApplyCurrentColor);
+            CreateButton(dialog.transform, "ResetBtn", "Reset State Default", new Vector2(220, -412), new Vector2(170, 34), new Color(0.28f, 0.28f, 0.32f), Color.white, ResetStateDefault);
+            CreateButton(dialog.transform, "CancelBtn", "Close", new Vector2(406, -412), new Vector2(170, 34), new Color(0.25f, 0.20f, 0.20f), Color.white, Close);
         }
 
-        void CreateStateCard(Transform parent, string name, string title, string sub, Vector2 pos, out Image swatch, out TMP_Text hexText)
+        Button CreateTabButton(Transform parent, string name, string label, Vector2 pos, Vector2 size, Action onClick)
         {
-            var card = new GameObject(name, typeof(RectTransform), typeof(Image));
-            card.transform.SetParent(parent, false);
-            var rt = (RectTransform)card.transform;
+            var btn = CreateButton(parent, name, label, pos, size, new Color(0.18f, 0.17f, 0.20f, 0.95f), new Color(0.75f, 0.72f, 0.68f), onClick);
+            var tmp = btn.GetComponentInChildren<TMP_Text>(true);
+            if (tmp) tmp.fontSize = 12;
+            return btn;
+        }
+
+        void CreateVariationCard(Transform parent, string name, Vector2 pos, out VariationCard card, Action onCardClicked)
+        {
+            var root = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+            root.transform.SetParent(parent, false);
+            var rt = (RectTransform)root.transform;
             rt.anchorMin = new Vector2(0f, 1f);
             rt.anchorMax = new Vector2(0f, 1f);
             rt.pivot = new Vector2(0f, 1f);
             rt.anchoredPosition = pos;
-            rt.sizeDelta = new Vector2(100f, 146f);
-            var bg = card.GetComponent<Image>();
+            rt.sizeDelta = new Vector2(104f, 146f);
+
+            var bg = root.GetComponent<Image>();
             bg.color = new Color(0.18f, 0.17f, 0.20f, 0.95f);
+
+            var btn = root.GetComponent<Button>();
+            btn.targetGraphic = bg;
+            btn.onClick.AddListener(() => onCardClicked?.Invoke());
 
             // Swatch Box
             var sObj = new GameObject("Swatch", typeof(RectTransform), typeof(Image));
-            sObj.transform.SetParent(card.transform, false);
+            sObj.transform.SetParent(root.transform, false);
             var sRt = (RectTransform)sObj.transform;
             sRt.anchorMin = new Vector2(0.5f, 1f);
             sRt.anchorMax = new Vector2(0.5f, 1f);
             sRt.pivot = new Vector2(0.5f, 1f);
-            sRt.anchoredPosition = new Vector2(0, -10);
-            sRt.sizeDelta = new Vector2(76, 52);
-            swatch = sObj.GetComponent<Image>();
+            sRt.anchoredPosition = new Vector2(0, -8);
+            sRt.sizeDelta = new Vector2(86, 52);
+            var swatch = sObj.GetComponent<Image>();
             swatch.color = Color.white;
 
-            // State Title
-            CreateText(card.transform, "Title", title, new Vector2(0, -68), new Vector2(100, 20), 13, Color.white, FontStyles.Bold, TextAlignmentOptions.Center);
-            // State Subtitle
-            CreateText(card.transform, "Sub", sub, new Vector2(0, -88), new Vector2(100, 16), 10, new Color(0.70f, 0.68f, 0.65f), FontStyles.Normal, TextAlignmentOptions.Center);
+            // Variation Title
+            var title = CreateText(root.transform, "Title", "Variation", new Vector2(0, -66), new Vector2(104, 30), 11, Color.white, FontStyles.Bold, TextAlignmentOptions.Center);
+            title.textWrappingMode = TextWrappingModes.Normal;
+
             // Hex Code
-            hexText = CreateText(card.transform, "Hex", "#FFFFFF", new Vector2(0, -114), new Vector2(100, 18), 11, new Color(1f, 0.90f, 0.50f), FontStyles.Bold, TextAlignmentOptions.Center);
+            var hex = CreateText(root.transform, "Hex", "#FFFFFF", new Vector2(0, -118), new Vector2(104, 18), 11, new Color(1f, 0.90f, 0.50f), FontStyles.Bold, TextAlignmentOptions.Center);
+
+            card = new VariationCard
+            {
+                Root = root,
+                Swatch = swatch,
+                Title = title,
+                Hex = hex,
+                Color = Color.white
+            };
         }
 
         TMP_Text CreateText(Transform parent, string name, string text, Vector2 pos, Vector2 size, float fontSize, Color color, FontStyles style, TextAlignmentOptions align = TextAlignmentOptions.Left)
@@ -542,7 +646,7 @@ namespace KingdomBottleneckHeatmap
 
             var tmp = textObj.GetComponent<TextMeshProUGUI>();
             tmp.text = label;
-            tmp.fontSize = 14;
+            tmp.fontSize = 13;
             tmp.color = textColor;
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.raycastTarget = false;

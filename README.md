@@ -1,6 +1,6 @@
 # Bottleneck Heatmap
 
-[GitHub releases](https://github.com/urakkaamyx/KingdomInc_BottleneckHeatmap/releases) · [Nexus Mods](https://www.nexusmods.com/kingdominc/mods/21) · Version 1.2.0
+[GitHub releases](https://github.com/urakkaamyx/KingdomInc_BottleneckHeatmap/releases) · [Nexus Mods](https://www.nexusmods.com/kingdominc/mods/21) · Version 1.2.1
 
 Real-time diagnostic heatmap for Kingdom Inc workshops. Color-codes all workshop nodes and connecting pipes with semi-transparent overlays to instantly identify running lines, starved machines, clogged bottlenecks, and full storage containers.
 
@@ -13,13 +13,17 @@ Real-time diagnostic heatmap for Kingdom Inc workshops. Color-codes all workshop
   - 🔴 **Clogged (Crimson Coral):** Downstream output buffer full, item rejected, or jammed pipe connections.
   - 🟣 **Full Storage (Royal Purple):** Storage containers (Stockpiles and global Armories) that have reached maximum capacity.
   - ⚪ **Idle (Slate):** Unconfigured recipes, dormant machines, or empty/dead pipe branches.
-- **Color Palette Generator:**
-  - Select any base color using interactive Hue and Saturation/Brightness surfaces, preset swatches, or hex code.
-  - Automatically computes and previews the 5 harmonious surrounding hues across all states.
+- **Dynamic Color Variations Per State:**
+  - Select base colors individually for each state: Running, Starved, Clogged, Full Storage, and Idle.
+  - Automatically generates 5 surrounding hue variations (Base, Warm, Cool, Bright, Deep) selectable directly from Foundation ModConfig dropdowns or interactive cards in the Color Palette Wheel.
+- **Color Palette Generator Wheel:**
+  - Select any color using interactive Hue and Saturation/Brightness surfaces, preset swatches, or hex code.
+  - Generates and previews surrounding hue variations for the selected state.
   - Accessible via Foundation Mod Config or by **Right-Clicking** the Heatmap button on the Mod Bar!
 - **Foundation Mod Config Integration:**
-  - **Percent Sliders** using Foundation's native `ModConfigSlider` for Node Overlay Opacity (10%–100%) and Pipe Overlay Opacity (20%–100%).
+  - **Percent Sliders** using Foundation's native `ModConfigSlider` (`section.AddSlider`) for Node Overlay Opacity (10%–100%) and Pipe Overlay Opacity (20%–100%).
   - **Width Slider** for Pipe Glow Width (1.0x–2.5x).
+  - **Color Customization:** Dedicated color pickers and dynamic variation dropdowns for each state.
   - **Vanilla Hotkey Setup:** Interactive key rebinding button in Mod Config, also integrated into Kingdom Inc's native Key Bindings options.
 - **Zero Save Footprint:** Visual-only runtime diagnostic; does not alter save files, recipe formulas, or vanilla mechanics.
 

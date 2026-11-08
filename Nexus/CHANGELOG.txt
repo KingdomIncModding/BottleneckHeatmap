@@ -1,8 +1,11 @@
-Version 1.2.0:
-- Foundation ModConfig Sliders: Replaced opacity dropdowns with native Foundation ModConfigElements percent sliders for Node Overlay Opacity (10%-100%), Pipe Overlay Opacity (20%-100%), and Pipe Glow Width (1.0x-2.5x).
-- Vanilla Hotkey Setup: Interactive keybinding matching vanilla Controls menu. Click to rebind with any keyboard key (Escape to cancel), with full integration into Kingdom Inc's native Key Bindings menu.
-- Color Palette Generator Popup: Pick any base color using live Saturation/Brightness and Hue surfaces or preset swatches, and the mod automatically computes and previews the 5 surrounding hues (Running, Starved, Clogged, Full Storage, Idle).
-- Right-Click Mod Bar Shortcut: Right-click the Heatmap toggle button on the Mod Bar to open the Color Palette Generator directly from the workshop HUD.
+Version 1.2.1:
+- Dynamic Color Variations Per State: Each bottleneck state (Running, Starved, Clogged, Full Storage, Idle) now features its own base color selector and dynamically generated surrounding hue variations (Base, Warm, Cool, Bright, Deep).
+- Interactive Color Picker Wheel: Pick any color on the 2D Saturation/Brightness canvas and rainbow hue bar. The popup generates 5 surrounding hue variations on clickable cards that immediately update in real-time.
+- Foundation ModConfig Integration: Full integration with Foundation's native ModConfigElements:
+  - Percent sliders (via ModConfigSlider) for Node Overlay Opacity (10%-100%), Pipe Overlay Opacity (20%-100%), and Pipe Glow Width (1.0x-2.5x).
+  - Dynamic dropdown options for each state that update live when new colors are selected.
+- Vanilla-Style Interactive Hotkey Rebinding: Click to rebind with any keyboard key (Escape to cancel), with full integration into Kingdom Inc's native PlayerInput.RebindableKeys and Key Bindings options menu.
+- Mod Bar Right-Click Shortcut: Right-click the Heatmap toggle button on the Foundation Mod Bar to open the Color Palette Wheel directly from the workshop HUD.
 
 Version 1.1.2:
 - Fixed toast notification rich text parsing: directly assign TextMeshPro text on UIStatusMessage to prevent Kingdom Inc's localization regex (#highlight# syntax) from corrupting hex color tags into literal text.
@@ -13,7 +16,7 @@ Version 1.1.1:
 Version 1.1.0:
 - Added dedicated Full Storage state (vibrant Purple by default, #B042FF) exclusively for storage containers (Stockpiles and global Armories) when they reach capacity.
 - Added comprehensive Foundation Mod Config settings:
-  - Toggle Hotkey selector (H, B, C, F, G, M, N, P, Tab, F1-F10, etc.).
+  - Toggle Hotkey selector.
   - Color palette customization for all states: Running, Starved, Clogged, Full Storage, and Idle.
 - Real-time live updating: changing colors or hotkeys in Foundation Mod Config instantly updates on-screen overlays without needing to reload.
 
@@ -26,4 +29,3 @@ Initial release 1.0.0:
 - Aligned Heatmap: ON / OFF toggle button on Foundation Mod Bar.
 - Instant hotkey toggle (H by default, configurable).
 - Foundation Mod Config support for opacity and glow width customization.
-

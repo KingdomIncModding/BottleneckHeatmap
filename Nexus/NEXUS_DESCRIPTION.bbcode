@@ -1,4 +1,4 @@
-[b]Bottleneck Heatmap - 1.2.0[/b]
+[b]Bottleneck Heatmap - 1.2.1[/b]
 Real-time visual diagnostic heatmap for Kingdom Inc workshops. Color-codes all workshop nodes and connecting pipes with semi-transparent overlays to instantly identify running lines, starved machines, clogged bottlenecks, and full storage containers.
 
 [b]Features[/b]
@@ -10,16 +10,19 @@ Real-time visual diagnostic heatmap for Kingdom Inc workshops. Color-codes all w
   - [b]🔴 Clogged (Crimson Coral):[/b] Downstream output buffer full, item rejected, or jammed pipe connections.
   - [b]🟣 Full Storage (Royal Purple):[/b] Storage containers (Stockpiles and global Armories) that have reached maximum capacity.
   - [b]⚪ Idle (Slate):[/b] Unconfigured recipes, dormant machines, or empty/dead pipe branches.
-[*]Instant Hotkey Toggle: Rebindable hotkey matching vanilla controls. Press [b]H[/b] (or customize to any key) at any time to toggle the heatmap on or off. Integrated into both Foundation Mod Config and Kingdom Inc's native Key Bindings menu.
-[*]Color Palette Generator:
-  - Pick any base color via interactive Hue and Saturation/Brightness surfaces, preset swatches, or hex entry.
-  - The mod automatically calculates and previews the 5 harmonious surrounding hues across all states (Running, Starved, Clogged, Full Storage, Idle).
-  - Open from Foundation Mod Config or by simply right-clicking the Mod Bar toggle button!
+[*]Dynamic Color Variations Per State:
+  - Select base colors individually for each state: Running, Starved, Clogged, Full Storage, and Idle.
+  - Automatically generates 5 surrounding hue variations (Base, Warm, Cool, Bright, Deep) selectable directly from Foundation ModConfig dropdowns or interactive cards in the Color Palette Wheel.
+[*]Interactive Color Palette Wheel:
+  - Pick colors via 2D Saturation/Brightness canvas and rainbow Hue strip, quick presets, or hex code.
+  - Open from Foundation Mod Config or right-click the Heatmap toggle button on the Mod Bar!
 [*]Foundation Mod Config Integration:
-  - Percent sliders for Node Overlay Opacity (10%–100%) and Pipe Overlay Opacity (20%–100%).
-  - Multiplier slider for Pipe Glow Width (1.0x–2.5x).
-  - Vanilla-style interactive hotkey rebinding button.
-  - Fine-grained color dropdowns and one-click Color Palette Generator.
+  - Native percent sliders for Node Overlay Opacity (10%–100%) and Pipe Overlay Opacity (20%–100%).
+  - Width slider for Pipe Glow Width (1.0x–2.5x).
+  - Dedicated color customization buttons and dynamic variation dropdowns for each state.
+[*]Vanilla-Style Interactive Hotkey Rebinding:
+  - Rebindable toggle hotkey with interactive listener matching vanilla controls. Click the button, press any key (Escape cancels).
+  - Fully integrated into both Foundation Mod Config and Kingdom Inc's native Key Bindings options menu.
 [*]Zero Save Footprint: Visual-only runtime diagnostic; does not alter save files, recipe formulas, or vanilla mechanics.
 [/list]
 
@@ -38,7 +41,7 @@ https://www.nexusmods.com/kingdominc/mods/18
 
 [b]Hotkeys[/b]
 [list]
-[*][b]H[/b] — Toggle Bottleneck Heatmap overlay.
+[*][b]H[/b] — Toggle Bottleneck Heatmap overlay (rebindable in Controls and Mod Config).
 [/list]
 
 [b]Compatibility and known issues[/b]
@@ -50,4 +53,3 @@ Close Kingdom Inc and delete the [i]BepInEx/plugins/BottleneckHeatmap[/i] folder
 [b]Credits and permissions[/b]
 Author: Urakka.
 Source code: https://github.com/urakkaamyx/KingdomInc_BottleneckHeatmap
-
