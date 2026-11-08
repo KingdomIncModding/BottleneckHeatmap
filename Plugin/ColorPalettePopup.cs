@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Assets.Behaviour.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -8,6 +10,100 @@ using UnityEngine.UI;
 
 namespace KingdomBottleneckHeatmap
 {
+    internal static class VanillaTheme
+    {
+        public static Sprite WindowSprite;
+        public static Sprite ButtonSprite;
+        public static Sprite CloseButtonSprite;
+        public static GameObject ButtonPrefab;
+        public static GameObject CloseButtonPrefab;
+        public static TMP_FontAsset Font;
+        public static Material FontMaterial;
+        public static bool Initialized;
+
+        public static void Ensure()
+        {
+            if (Initialized && WindowSprite != null && ButtonSprite != null && Font != null) return;
+            Initialized = true;
+
+            try
+            {
+                // 1. Text / Font from any active TextMeshPro in the game
+                var texts = Resources.FindObjectsOfTypeAll<TMP_Text>();
+                foreach (var t in texts)
+                {
+                    if (t != null && t.font != null && t.font.name != "LiberationSans SDF" && t.font.name != "Arial")
+                    {
+                        Font = t.font;
+                        FontMaterial = t.fontSharedMaterial;
+                        break;
+                    }
+                }
+
+                // 2. OptionsUI elements
+                var options = Resources.FindObjectsOfTypeAll<Assets.Behaviour.UI.MainMenu.OptionsUI>().FirstOrDefault();
+                if (options != null)
+                {
+                    var optImg = options.GetComponent<Image>();
+                    if (optImg != null && optImg.sprite != null)
+                    {
+                        WindowSprite = optImg.sprite;
+                    }
+
+                    var buttons = options.GetComponentsInChildren<Button>(true);
+                    var apply = buttons.FirstOrDefault(b => b.name == "Apply" || b.name == "Cancel" || b.name == "KeyBindings");
+                    if (apply != null)
+                    {
+                        ButtonPrefab = apply.gameObject;
+                        var bImg = apply.GetComponent<Image>();
+                        if (bImg != null && bImg.sprite != null) ButtonSprite = bImg.sprite;
+                    }
+
+                    var close = buttons.FirstOrDefault(b => b.name == "Close" || b.name == "Back" || b.name.StartsWith("Close"));
+                    if (close != null)
+                    {
+                        CloseButtonPrefab = close.gameObject;
+                        var cImg = close.GetComponent<Image>();
+                        if (cImg != null && cImg.sprite != null) CloseButtonSprite = cImg.sprite;
+                    }
+                }
+
+                // 3. Fallback to popups across the game
+                if (WindowSprite == null)
+                {
+                    var popups = Resources.FindObjectsOfTypeAll<Assets.Behaviour.UI.Shared.UIPopupMenu>();
+                    foreach (var p in popups)
+                    {
+                        var img = p.GetComponent<Image>() ?? p.GetComponentInChildren<Image>(true);
+                        if (img != null && img.sprite != null)
+                        {
+                            WindowSprite = img.sprite;
+                            break;
+                        }
+                    }
+                }
+
+                // 4. Fallback search all sliced images
+                if (WindowSprite == null || ButtonSprite == null || CloseButtonSprite == null)
+                {
+                    var allImgs = Resources.FindObjectsOfTypeAll<Image>();
+                    foreach (var img in allImgs)
+                    {
+                        if (img == null || img.sprite == null) continue;
+                        string s = img.sprite.name.ToLowerInvariant();
+                        if (WindowSprite == null && (s.Contains("window") || s.Contains("dialog") || s.Contains("modal") || s.Contains("frame_bg")))
+                            WindowSprite = img.sprite;
+                        if (ButtonSprite == null && (s.Contains("button") || s.Contains("btn")) && img.type == Image.Type.Sliced)
+                            ButtonSprite = img.sprite;
+                        if (CloseButtonSprite == null && (s.Contains("close") || s.Contains("exit") || s.Contains("cross")))
+                            CloseButtonSprite = img.sprite;
+                    }
+                }
+            }
+            catch { }
+        }
+    }
+
     public enum PickerMode { SaturationValue, Hue }
 
     public sealed class PickerSurface : MaskableGraphic, IPointerDownHandler, IDragHandler
@@ -140,6 +236,7 @@ namespace KingdomBottleneckHeatmap
         struct VariationCard
         {
             public GameObject Root;
+            public Image Border;
             public Image Swatch;
             public TMP_Text Title;
             public TMP_Text Hex;
@@ -176,12 +273,14 @@ namespace KingdomBottleneckHeatmap
         {
             if (_instance)
             {
+                UISounds.TurnPage();
                 _instance.gameObject.SetActive(false);
             }
         }
 
         void Awake()
         {
+            VanillaTheme.Ensure();
             BuildUI();
         }
 
@@ -222,7 +321,7 @@ namespace KingdomBottleneckHeatmap
             UpdateGeneratedVariations();
 
             string stateName = GetStateDisplayName(_currentState);
-            if (_headerSubtitle) _headerSubtitle.text = $"Select base color for <color=yellow>{stateName}</color> to auto-generate slight variation hues";
+            if (_headerSubtitle) _headerSubtitle.text = $"Select base color for <color=#FFD92E>{stateName}</color> to auto-generate slight variation hues";
             if (_variationsTitle) _variationsTitle.text = $"Auto-Generated Surrounding Hues for {stateName}:";
             if (_applyButton)
             {
@@ -254,9 +353,16 @@ namespace KingdomBottleneckHeatmap
         {
             if (!tab) return;
             var img = tab.GetComponent<Image>();
-            if (img) img.color = active ? new Color(0.35f, 0.32f, 0.25f, 1f) : new Color(0.18f, 0.17f, 0.20f, 0.95f);
+            if (img)
+            {
+                img.color = active ? new Color(1f, 0.95f, 0.85f, 1f) : new Color(0.70f, 0.68f, 0.65f, 0.9f);
+            }
             var text = tab.GetComponentInChildren<TMP_Text>(true);
-            if (text) text.color = active ? Color.yellow : new Color(0.75f, 0.72f, 0.68f);
+            if (text)
+            {
+                text.color = active ? new Color(1f, 0.85f, 0.18f, 1f) : new Color(0.78f, 0.74f, 0.68f, 1f);
+                text.fontStyle = active ? FontStyles.Bold : FontStyles.Normal;
+            }
         }
 
         void UpdateSurfaces()
@@ -387,13 +493,15 @@ namespace KingdomBottleneckHeatmap
 
         void BuildUI()
         {
+            VanillaTheme.Ensure();
+
             var rt = (RectTransform)transform;
             rt.anchorMin = Vector2.zero;
             rt.anchorMax = Vector2.one;
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
 
-            // 1. Semi-transparent blocker backdrop
+            // 1. Blocker backdrop
             var backdrop = new GameObject("Backdrop", typeof(RectTransform), typeof(Image), typeof(Button));
             backdrop.transform.SetParent(transform, false);
             var bRt = (RectTransform)backdrop.transform;
@@ -406,57 +514,66 @@ namespace KingdomBottleneckHeatmap
             var bBtn = backdrop.GetComponent<Button>();
             bBtn.onClick.AddListener(Close);
 
-            // 2. Main dialog frame
+            // 2. Main dialog frame (matching Kingdom Inc window frame)
             var dialog = new GameObject("DialogFrame", typeof(RectTransform), typeof(Image));
             dialog.transform.SetParent(transform, false);
             var dRt = (RectTransform)dialog.transform;
             dRt.anchorMin = new Vector2(0.5f, 0.5f);
             dRt.anchorMax = new Vector2(0.5f, 0.5f);
             dRt.pivot = new Vector2(0.5f, 0.5f);
-            dRt.sizeDelta = new Vector2(600f, 460f);
-            var dImg = dialog.GetComponent<Image>();
-            dImg.color = new Color(0.12f, 0.11f, 0.14f, 0.98f);
+            dRt.sizeDelta = new Vector2(620f, 470f);
 
-            // Border outline
-            var border = new GameObject("Border", typeof(RectTransform), typeof(Image));
-            border.transform.SetParent(dialog.transform, false);
-            var brt = (RectTransform)border.transform;
-            brt.anchorMin = Vector2.zero;
-            brt.anchorMax = Vector2.one;
-            brt.offsetMin = new Vector2(-2, -2);
-            brt.offsetMax = new Vector2(2, 2);
-            var bBorder = border.GetComponent<Image>();
-            bBorder.color = new Color(0.38f, 0.33f, 0.25f, 1f);
-            border.transform.SetAsFirstSibling();
+            var dImg = dialog.GetComponent<Image>();
+            if (VanillaTheme.WindowSprite != null)
+            {
+                dImg.sprite = VanillaTheme.WindowSprite;
+                dImg.type = Image.Type.Sliced;
+                dImg.color = Color.white;
+            }
+            else
+            {
+                dImg.color = new Color(0.14f, 0.12f, 0.16f, 0.98f);
+                // Outer gold border fallback
+                var border = new GameObject("Border", typeof(RectTransform), typeof(Image));
+                border.transform.SetParent(dialog.transform, false);
+                var brt = (RectTransform)border.transform;
+                brt.anchorMin = Vector2.zero;
+                brt.anchorMax = Vector2.one;
+                brt.offsetMin = new Vector2(-2, -2);
+                brt.offsetMax = new Vector2(2, 2);
+                var bBorder = border.GetComponent<Image>();
+                bBorder.color = new Color(0.48f, 0.40f, 0.28f, 1f);
+                border.transform.SetAsFirstSibling();
+            }
 
             // Header Title
-            CreateText(dialog.transform, "Title", "Heatmap Color Variations Generator", new Vector2(24, -16), new Vector2(400, 26), 18, Color.yellow, FontStyles.Bold);
-            _headerSubtitle = CreateText(dialog.transform, "Subtitle", "Select base color to auto-generate slight variation hues", new Vector2(24, -40), new Vector2(500, 20), 12, new Color(0.75f, 0.72f, 0.65f), FontStyles.Normal);
+            CreateText(dialog.transform, "Title", "Heatmap Color Variations Generator", new Vector2(24, -18), new Vector2(480, 26), 18, new Color(1f, 0.85f, 0.18f), FontStyles.Bold);
+            _headerSubtitle = CreateText(dialog.transform, "Subtitle", "Select base color to auto-generate slight variation hues", new Vector2(24, -42), new Vector2(500, 20), 12, new Color(0.78f, 0.74f, 0.68f), FontStyles.Normal);
 
             // Close button [X]
-            CreateButton(dialog.transform, "CloseBtn", "X", new Vector2(550, -16), new Vector2(28, 28), new Color(0.25f, 0.20f, 0.20f), Color.white, Close);
+            CreateCloseButton(dialog.transform, new Vector2(-16, -16), Close);
 
             // State Selection Tabs
             float tabStartX = 24f;
-            float tabWidth = 106f;
-            float tabY = -66f;
+            float tabWidth = 110f;
+            float tabY = -68f;
 
-            _tabRunning = CreateTabButton(dialog.transform, "Tab_Running", "Running", new Vector2(tabStartX + 0 * (tabWidth + 4), tabY), new Vector2(tabWidth, 26), () => SelectState(BottleneckState.Running));
-            _tabStarved = CreateTabButton(dialog.transform, "Tab_Starved", "Starved", new Vector2(tabStartX + 1 * (tabWidth + 4), tabY), new Vector2(tabWidth, 26), () => SelectState(BottleneckState.Starved));
-            _tabClogged = CreateTabButton(dialog.transform, "Tab_Clogged", "Clogged", new Vector2(tabStartX + 2 * (tabWidth + 4), tabY), new Vector2(tabWidth, 26), () => SelectState(BottleneckState.Clogged));
-            _tabFullStorage = CreateTabButton(dialog.transform, "Tab_Full", "Full Storage", new Vector2(tabStartX + 3 * (tabWidth + 4), tabY), new Vector2(tabWidth, 26), () => SelectState(BottleneckState.FullStorage));
-            _tabIdle = CreateTabButton(dialog.transform, "Tab_Idle", "Idle", new Vector2(tabStartX + 4 * (tabWidth + 4), tabY), new Vector2(tabWidth, 26), () => SelectState(BottleneckState.Idle));
+            _tabRunning = CreateTabButton(dialog.transform, "Tab_Running", "Running", new Vector2(tabStartX + 0 * (tabWidth + 5), tabY), new Vector2(tabWidth, 26), () => SelectState(BottleneckState.Running));
+            _tabStarved = CreateTabButton(dialog.transform, "Tab_Starved", "Starved", new Vector2(tabStartX + 1 * (tabWidth + 5), tabY), new Vector2(tabWidth, 26), () => SelectState(BottleneckState.Starved));
+            _tabClogged = CreateTabButton(dialog.transform, "Tab_Clogged", "Clogged", new Vector2(tabStartX + 2 * (tabWidth + 5), tabY), new Vector2(tabWidth, 26), () => SelectState(BottleneckState.Clogged));
+            _tabFullStorage = CreateTabButton(dialog.transform, "Tab_Full", "Full Storage", new Vector2(tabStartX + 3 * (tabWidth + 5), tabY), new Vector2(tabWidth, 26), () => SelectState(BottleneckState.FullStorage));
+            _tabIdle = CreateTabButton(dialog.transform, "Tab_Idle", "Idle", new Vector2(tabStartX + 4 * (tabWidth + 5), tabY), new Vector2(tabWidth, 26), () => SelectState(BottleneckState.Idle));
 
-            // Color Picker Area
+            // Color Picker Area Frame
             // SV Surface (210 x 110)
+            var svBorder = CreatePanelBox(dialog.transform, "SVBorder", new Vector2(24, -102), new Vector2(212, 112));
             var svObj = new GameObject("SVSurface", typeof(RectTransform), typeof(PickerSurface));
-            svObj.transform.SetParent(dialog.transform, false);
+            svObj.transform.SetParent(svBorder.transform, false);
             var svRt = (RectTransform)svObj.transform;
-            svRt.anchorMin = new Vector2(0f, 1f);
-            svRt.anchorMax = new Vector2(0f, 1f);
-            svRt.pivot = new Vector2(0f, 1f);
-            svRt.anchoredPosition = new Vector2(24, -100);
-            svRt.sizeDelta = new Vector2(210, 110);
+            svRt.anchorMin = Vector2.zero;
+            svRt.anchorMax = Vector2.one;
+            svRt.offsetMin = new Vector2(1, 1);
+            svRt.offsetMax = new Vector2(-1, -1);
             _svSurface = svObj.GetComponent<PickerSurface>();
             _svSurface.Mode = PickerMode.SaturationValue;
             _svSurface.Changed = p =>
@@ -468,14 +585,14 @@ namespace KingdomBottleneckHeatmap
             };
 
             // Hue Strip (24 x 110)
+            var hueBorder = CreatePanelBox(dialog.transform, "HueBorder", new Vector2(244, -102), new Vector2(26, 112));
             var hueObj = new GameObject("HueStrip", typeof(RectTransform), typeof(PickerSurface));
-            hueObj.transform.SetParent(dialog.transform, false);
+            hueObj.transform.SetParent(hueBorder.transform, false);
             var hueRt = (RectTransform)hueObj.transform;
-            hueRt.anchorMin = new Vector2(0f, 1f);
-            hueRt.anchorMax = new Vector2(0f, 1f);
-            hueRt.pivot = new Vector2(0f, 1f);
-            hueRt.anchoredPosition = new Vector2(244, -100);
-            hueRt.sizeDelta = new Vector2(24, 110);
+            hueRt.anchorMin = Vector2.zero;
+            hueRt.anchorMax = Vector2.one;
+            hueRt.offsetMin = new Vector2(1, 1);
+            hueRt.offsetMax = new Vector2(-1, -1);
             _hueSurface = hueObj.GetComponent<PickerSurface>();
             _hueSurface.Mode = PickerMode.Hue;
             _hueSurface.Changed = p =>
@@ -486,24 +603,24 @@ namespace KingdomBottleneckHeatmap
             };
 
             // Selected Base Color Preview Box
+            var bpBorder = CreatePanelBox(dialog.transform, "BaseColorBorder", new Vector2(280, -102), new Vector2(52, 50));
             var basePrevObj = new GameObject("BaseColorPreview", typeof(RectTransform), typeof(Image));
-            basePrevObj.transform.SetParent(dialog.transform, false);
+            basePrevObj.transform.SetParent(bpBorder.transform, false);
             var bpRt = (RectTransform)basePrevObj.transform;
-            bpRt.anchorMin = new Vector2(0f, 1f);
-            bpRt.anchorMax = new Vector2(0f, 1f);
-            bpRt.pivot = new Vector2(0f, 1f);
-            bpRt.anchoredPosition = new Vector2(280, -100);
-            bpRt.sizeDelta = new Vector2(50, 48);
+            bpRt.anchorMin = Vector2.zero;
+            bpRt.anchorMax = Vector2.one;
+            bpRt.offsetMin = new Vector2(2, 2);
+            bpRt.offsetMax = new Vector2(-2, -2);
             _baseColorPreview = basePrevObj.GetComponent<Image>();
             _baseColorPreview.color = Color.green;
 
-            _baseHexText = CreateText(dialog.transform, "BaseHex", "#26FA73", new Vector2(280, -154), new Vector2(60, 20), 12, Color.white, FontStyles.Bold, TextAlignmentOptions.Left);
+            _baseHexText = CreateText(dialog.transform, "BaseHex", "#26FA73", new Vector2(280, -156), new Vector2(62, 20), 12, new Color(1f, 0.85f, 0.18f), FontStyles.Bold, TextAlignmentOptions.Left);
 
             // Quick Presets
-            CreateText(dialog.transform, "PresetsLabel", "Quick Presets:", new Vector2(350, -100), new Vector2(100, 16), 11, Color.white, FontStyles.Bold);
+            CreateText(dialog.transform, "PresetsLabel", "Quick Presets:", new Vector2(352, -102), new Vector2(100, 16), 11, new Color(0.85f, 0.82f, 0.76f), FontStyles.Bold);
 
-            float pX = 350f;
-            float pY = -120f;
+            float pX = 352f;
+            float pY = -122f;
             for (int i = 0; i < Presets.Length; i++)
             {
                 string hex = Presets[i];
@@ -517,18 +634,17 @@ namespace KingdomBottleneckHeatmap
             }
 
             // Section 2: Surrounding Hues Cards (Slight Variations)
-            _variationsTitle = CreateText(dialog.transform, "VariationsLabel", "Auto-Generated Surrounding Hues:", new Vector2(24, -226), new Vector2(480, 20), 13, Color.yellow, FontStyles.Bold);
+            _variationsTitle = CreateText(dialog.transform, "VariationsLabel", "Auto-Generated Surrounding Hues:", new Vector2(24, -228), new Vector2(480, 20), 13, new Color(1f, 0.85f, 0.18f), FontStyles.Bold);
 
             float cardStartX = 24f;
-            float cardSpacing = 112f;
-            float cardY = -250f;
+            float cardSpacing = 116f;
+            float cardY = -252f;
 
             for (int i = 0; i < 5; i++)
             {
                 int cardIdx = i;
                 CreateVariationCard(dialog.transform, $"VarCard_{i}", new Vector2(cardStartX + i * cardSpacing, cardY), out _cards[i], () =>
                 {
-                    // Clicking a card adopts that variation as the base!
                     Color.RGBToHSV(_cards[cardIdx].Color, out _baseHue, out _baseSaturation, out _baseValue);
                     UpdateSurfaces();
                     UpdateGeneratedVariations();
@@ -536,16 +652,36 @@ namespace KingdomBottleneckHeatmap
             }
 
             // Section 3: Bottom Action Buttons
-            _applyButton = CreateButton(dialog.transform, "ApplyBtn", "Apply to State", new Vector2(24, -412), new Vector2(180, 34), new Color(0.20f, 0.48f, 0.28f), Color.white, ApplyCurrentColor);
-            CreateButton(dialog.transform, "ResetBtn", "Reset State Default", new Vector2(220, -412), new Vector2(170, 34), new Color(0.28f, 0.28f, 0.32f), Color.white, ResetStateDefault);
-            CreateButton(dialog.transform, "CancelBtn", "Close", new Vector2(406, -412), new Vector2(170, 34), new Color(0.25f, 0.20f, 0.20f), Color.white, Close);
+            _applyButton = CreateThemedButton(dialog.transform, "ApplyBtn", "Apply to State", new Vector2(24, -420), new Vector2(184, 36), ApplyCurrentColor);
+            CreateThemedButton(dialog.transform, "ResetBtn", "Reset State Default", new Vector2(220, -420), new Vector2(174, 36), ResetStateDefault);
+            CreateThemedButton(dialog.transform, "CancelBtn", "Close", new Vector2(406, -420), new Vector2(174, 36), Close);
+        }
+
+        GameObject CreatePanelBox(Transform parent, string name, Vector2 pos, Vector2 size)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = pos;
+            rt.sizeDelta = size;
+
+            var img = go.GetComponent<Image>();
+            img.color = new Color(0.36f, 0.32f, 0.24f, 1f); // Dark gold border
+            return go;
         }
 
         Button CreateTabButton(Transform parent, string name, string label, Vector2 pos, Vector2 size, Action onClick)
         {
-            var btn = CreateButton(parent, name, label, pos, size, new Color(0.18f, 0.17f, 0.20f, 0.95f), new Color(0.75f, 0.72f, 0.68f), onClick);
+            var btn = CreateThemedButton(parent, name, label, pos, size, onClick);
             var tmp = btn.GetComponentInChildren<TMP_Text>(true);
-            if (tmp) tmp.fontSize = 12;
+            if (tmp)
+            {
+                tmp.fontSizeMin = 10;
+                tmp.fontSizeMax = 13;
+            }
             return btn;
         }
 
@@ -558,37 +694,61 @@ namespace KingdomBottleneckHeatmap
             rt.anchorMax = new Vector2(0f, 1f);
             rt.pivot = new Vector2(0f, 1f);
             rt.anchoredPosition = pos;
-            rt.sizeDelta = new Vector2(104f, 146f);
+            rt.sizeDelta = new Vector2(108f, 150f);
 
             var bg = root.GetComponent<Image>();
-            bg.color = new Color(0.18f, 0.17f, 0.20f, 0.95f);
+            if (VanillaTheme.ButtonSprite != null)
+            {
+                bg.sprite = VanillaTheme.ButtonSprite;
+                bg.type = Image.Type.Sliced;
+                bg.color = new Color(0.85f, 0.82f, 0.78f, 1f);
+            }
+            else
+            {
+                bg.color = new Color(0.18f, 0.16f, 0.20f, 0.98f);
+            }
 
             var btn = root.GetComponent<Button>();
             btn.targetGraphic = bg;
-            btn.onClick.AddListener(() => onCardClicked?.Invoke());
+            btn.onClick.AddListener(() =>
+            {
+                UISounds.TurnPage();
+                onCardClicked?.Invoke();
+            });
 
-            // Swatch Box
+            // Card Swatch Box with inset border
+            var sBorder = new GameObject("SwatchBorder", typeof(RectTransform), typeof(Image));
+            sBorder.transform.SetParent(root.transform, false);
+            var sbRt = (RectTransform)sBorder.transform;
+            sbRt.anchorMin = new Vector2(0.5f, 1f);
+            sbRt.anchorMax = new Vector2(0.5f, 1f);
+            sbRt.pivot = new Vector2(0.5f, 1f);
+            sbRt.anchoredPosition = new Vector2(0, -8);
+            sbRt.sizeDelta = new Vector2(92, 54);
+            var sbImg = sBorder.GetComponent<Image>();
+            sbImg.color = new Color(0.32f, 0.28f, 0.22f, 1f);
+
             var sObj = new GameObject("Swatch", typeof(RectTransform), typeof(Image));
-            sObj.transform.SetParent(root.transform, false);
+            sObj.transform.SetParent(sBorder.transform, false);
             var sRt = (RectTransform)sObj.transform;
-            sRt.anchorMin = new Vector2(0.5f, 1f);
-            sRt.anchorMax = new Vector2(0.5f, 1f);
-            sRt.pivot = new Vector2(0.5f, 1f);
-            sRt.anchoredPosition = new Vector2(0, -8);
-            sRt.sizeDelta = new Vector2(86, 52);
+            sRt.anchorMin = Vector2.zero;
+            sRt.anchorMax = Vector2.one;
+            sRt.offsetMin = new Vector2(2, 2);
+            sRt.offsetMax = new Vector2(-2, -2);
             var swatch = sObj.GetComponent<Image>();
             swatch.color = Color.white;
 
             // Variation Title
-            var title = CreateText(root.transform, "Title", "Variation", new Vector2(0, -66), new Vector2(104, 30), 11, Color.white, FontStyles.Bold, TextAlignmentOptions.Center);
+            var title = CreateText(root.transform, "Title", "Variation", new Vector2(0, -68), new Vector2(108, 30), 11, new Color(0.92f, 0.90f, 0.85f), FontStyles.Bold, TextAlignmentOptions.Center);
             title.textWrappingMode = TextWrappingModes.Normal;
 
             // Hex Code
-            var hex = CreateText(root.transform, "Hex", "#FFFFFF", new Vector2(0, -118), new Vector2(104, 18), 11, new Color(1f, 0.90f, 0.50f), FontStyles.Bold, TextAlignmentOptions.Center);
+            var hex = CreateText(root.transform, "Hex", "#FFFFFF", new Vector2(0, -120), new Vector2(108, 18), 11, new Color(1f, 0.85f, 0.18f), FontStyles.Bold, TextAlignmentOptions.Center);
 
             card = new VariationCard
             {
                 Root = root,
+                Border = sbImg,
                 Swatch = swatch,
                 Title = title,
                 Hex = hex,
@@ -608,6 +768,11 @@ namespace KingdomBottleneckHeatmap
             rt.sizeDelta = size;
 
             var tmp = go.GetComponent<TextMeshProUGUI>();
+            if (VanillaTheme.Font != null)
+            {
+                tmp.font = VanillaTheme.Font;
+                tmp.fontSharedMaterial = VanillaTheme.FontMaterial;
+            }
             tmp.text = text;
             tmp.fontSize = fontSize;
             tmp.color = color;
@@ -618,44 +783,137 @@ namespace KingdomBottleneckHeatmap
             return tmp;
         }
 
-        Button CreateButton(Transform parent, string name, string label, Vector2 pos, Vector2 size, Color bgColor, Color textColor, Action onClick)
+        Button CreateThemedButton(Transform parent, string name, string label, Vector2 pos, Vector2 size, Action onClick)
         {
-            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
-            go.transform.SetParent(parent, false);
-            var rt = (RectTransform)go.transform;
+            GameObject btnObj;
+            Button btn;
+            TMP_Text btnText;
+
+            if (VanillaTheme.ButtonPrefab != null)
+            {
+                btnObj = UnityEngine.Object.Instantiate(VanillaTheme.ButtonPrefab, parent);
+                btnObj.name = name;
+                btn = btnObj.GetComponent<Button>();
+                btn.onClick = new Button.ButtonClickedEvent();
+                btnText = btnObj.GetComponentInChildren<TMP_Text>(true);
+            }
+            else
+            {
+                btnObj = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+                btnObj.transform.SetParent(parent, false);
+                var img = btnObj.GetComponent<Image>();
+                if (VanillaTheme.ButtonSprite != null)
+                {
+                    img.sprite = VanillaTheme.ButtonSprite;
+                    img.type = Image.Type.Sliced;
+                    img.color = Color.white;
+                }
+                else
+                {
+                    img.color = new Color(0.25f, 0.22f, 0.20f, 1f);
+                }
+                btn = btnObj.GetComponent<Button>();
+                btn.targetGraphic = img;
+
+                var textObj = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+                textObj.transform.SetParent(btnObj.transform, false);
+                btnText = textObj.GetComponent<TextMeshProUGUI>();
+            }
+
+            var rt = (RectTransform)btnObj.transform;
             rt.anchorMin = new Vector2(0f, 1f);
             rt.anchorMax = new Vector2(0f, 1f);
             rt.pivot = new Vector2(0f, 1f);
             rt.anchoredPosition = pos;
             rt.sizeDelta = size;
 
-            var img = go.GetComponent<Image>();
-            img.color = bgColor;
+            btn.onClick.AddListener(() =>
+            {
+                UISounds.TurnPage();
+                onClick?.Invoke();
+            });
 
-            var btn = go.GetComponent<Button>();
-            btn.targetGraphic = img;
-            btn.onClick.AddListener(() => onClick?.Invoke());
-
-            var textObj = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
-            textObj.transform.SetParent(go.transform, false);
-            var tRt = (RectTransform)textObj.transform;
-            tRt.anchorMin = Vector2.zero;
-            tRt.anchorMax = Vector2.one;
-            tRt.offsetMin = Vector2.zero;
-            tRt.offsetMax = Vector2.zero;
-
-            var tmp = textObj.GetComponent<TextMeshProUGUI>();
-            tmp.text = label;
-            tmp.fontSize = 13;
-            tmp.color = textColor;
-            tmp.alignment = TextAlignmentOptions.Center;
-            tmp.raycastTarget = false;
-            tmp.overflowMode = TextOverflowModes.Overflow;
+            if (btnText != null)
+            {
+                if (VanillaTheme.Font != null)
+                {
+                    btnText.font = VanillaTheme.Font;
+                    btnText.fontSharedMaterial = VanillaTheme.FontMaterial;
+                }
+                btnText.text = label;
+                btnText.alignment = TextAlignmentOptions.Center;
+                btnText.fontSizeMin = 10;
+                btnText.fontSizeMax = 14;
+                btnText.enableAutoSizing = true;
+                btnText.color = new Color(0.96f, 0.94f, 0.90f);
+            }
 
             return btn;
         }
 
-        Button CreateColorButton(Transform parent, string name, Color color, Vector2 pos, Vector2 size, Action onClick)
+        void CreateCloseButton(Transform parent, Vector2 pos, Action onClick)
+        {
+            GameObject closeObj;
+            Button btn;
+
+            if (VanillaTheme.CloseButtonPrefab != null)
+            {
+                closeObj = UnityEngine.Object.Instantiate(VanillaTheme.CloseButtonPrefab, parent);
+                closeObj.name = "CloseBtn";
+                btn = closeObj.GetComponent<Button>();
+                btn.onClick = new Button.ButtonClickedEvent();
+            }
+            else
+            {
+                closeObj = new GameObject("CloseBtn", typeof(RectTransform), typeof(Image), typeof(Button));
+                closeObj.transform.SetParent(parent, false);
+                var img = closeObj.GetComponent<Image>();
+                if (VanillaTheme.CloseButtonSprite != null)
+                {
+                    img.sprite = VanillaTheme.CloseButtonSprite;
+                    img.color = Color.white;
+                }
+                else
+                {
+                    img.color = new Color(0.35f, 0.18f, 0.18f, 1f);
+                }
+                btn = closeObj.GetComponent<Button>();
+                btn.targetGraphic = img;
+
+                var textObj = new GameObject("X", typeof(RectTransform), typeof(TextMeshProUGUI));
+                textObj.transform.SetParent(closeObj.transform, false);
+                var t = textObj.GetComponent<TextMeshProUGUI>();
+                if (VanillaTheme.Font != null)
+                {
+                    t.font = VanillaTheme.Font;
+                    t.fontSharedMaterial = VanillaTheme.FontMaterial;
+                }
+                t.text = "X";
+                t.fontSize = 15;
+                t.fontStyle = FontStyles.Bold;
+                t.color = Color.white;
+                t.alignment = TextAlignmentOptions.Center;
+                var trt = (RectTransform)textObj.transform;
+                trt.anchorMin = Vector2.zero;
+                trt.anchorMax = Vector2.one;
+                trt.offsetMin = trt.offsetMax = Vector2.zero;
+            }
+
+            var rt = (RectTransform)closeObj.transform;
+            rt.anchorMin = new Vector2(1f, 1f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(1f, 1f);
+            rt.anchoredPosition = pos;
+            rt.sizeDelta = new Vector2(28f, 28f);
+
+            btn.onClick.AddListener(() =>
+            {
+                UISounds.TurnPage();
+                onClick?.Invoke();
+            });
+        }
+
+        void CreateColorButton(Transform parent, string name, Color color, Vector2 pos, Vector2 size, Action onClick)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
             go.transform.SetParent(parent, false);
@@ -666,13 +924,26 @@ namespace KingdomBottleneckHeatmap
             rt.anchoredPosition = pos;
             rt.sizeDelta = size;
 
-            var img = go.GetComponent<Image>();
-            img.color = color;
+            var borderImg = go.GetComponent<Image>();
+            borderImg.color = new Color(0.32f, 0.28f, 0.22f, 1f);
+
+            var innerObj = new GameObject("Inner", typeof(RectTransform), typeof(Image));
+            innerObj.transform.SetParent(go.transform, false);
+            var irt = (RectTransform)innerObj.transform;
+            irt.anchorMin = Vector2.zero;
+            irt.anchorMax = Vector2.one;
+            irt.offsetMin = new Vector2(2, 2);
+            irt.offsetMax = new Vector2(-2, -2);
+            var innerImg = innerObj.GetComponent<Image>();
+            innerImg.color = color;
 
             var btn = go.GetComponent<Button>();
-            btn.targetGraphic = img;
-            btn.onClick.AddListener(() => onClick?.Invoke());
-            return btn;
+            btn.targetGraphic = borderImg;
+            btn.onClick.AddListener(() =>
+            {
+                UISounds.TurnPage();
+                onClick?.Invoke();
+            });
         }
     }
 }

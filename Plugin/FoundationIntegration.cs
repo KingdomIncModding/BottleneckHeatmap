@@ -492,15 +492,15 @@ namespace KingdomBottleneckHeatmap
             var btnObj = button.gameObject;
             btnObj.transform.SetParent(row.transform, false);
             var bRt = (RectTransform)btnObj.transform;
-            bRt.anchorMin = new Vector2(0.45f, 0.08f);
-            bRt.anchorMax = new Vector2(0.66f, 0.92f);
+            bRt.anchorMin = new Vector2(0.42f, 0.08f);
+            bRt.anchorMax = new Vector2(0.60f, 0.92f);
             bRt.offsetMin = Vector2.zero;
             bRt.offsetMax = Vector2.zero;
             if (btnText != null)
             {
                 btnText.text = "Pick Color";
-                btnText.fontSizeMin = 11;
-                btnText.fontSizeMax = 15;
+                btnText.fontSizeMin = 10;
+                btnText.fontSizeMax = 14;
                 btnText.enableAutoSizing = true;
             }
             UnityEngine.Object.Destroy(dummyBtnRow);
@@ -525,15 +525,33 @@ namespace KingdomBottleneckHeatmap
             var dropObj = _activeDropdown.gameObject;
             dropObj.transform.SetParent(row.transform, false);
             var dRt = (RectTransform)dropObj.transform;
-            dRt.anchorMin = new Vector2(0.67f, 0.08f);
-            dRt.anchorMax = new Vector2(0.98f, 0.92f);
+            dRt.anchorMin = new Vector2(0.61f, 0.08f);
+            dRt.anchorMax = new Vector2(0.99f, 0.92f);
             dRt.offsetMin = Vector2.zero;
             dRt.offsetMax = Vector2.zero;
             if (_activeDropdown.captionText != null)
             {
-                _activeDropdown.captionText.fontSizeMin = 9;
-                _activeDropdown.captionText.fontSizeMax = 13;
+                _activeDropdown.captionText.textWrappingMode = TextWrappingModes.NoWrap;
+                _activeDropdown.captionText.overflowMode = TextOverflowModes.Ellipsis;
+                _activeDropdown.captionText.enableAutoSizing = true;
+                _activeDropdown.captionText.fontSizeMin = 8f;
+                _activeDropdown.captionText.fontSizeMax = 13f;
                 _activeDropdown.captionText.alignment = TextAlignmentOptions.MidlineLeft;
+
+                var cRt = _activeDropdown.captionText.rectTransform;
+                cRt.anchorMin = Vector2.zero;
+                cRt.anchorMax = Vector2.one;
+                cRt.offsetMin = new Vector2(8f, 0f);
+                cRt.offsetMax = new Vector2(-28f, 0f);
+            }
+
+            if (_activeDropdown.template != null)
+            {
+                foreach (var t in _activeDropdown.template.GetComponentsInChildren<TMP_Text>(true))
+                {
+                    t.textWrappingMode = TextWrappingModes.NoWrap;
+                    t.overflowMode = TextOverflowModes.Ellipsis;
+                }
             }
             UnityEngine.Object.Destroy(dummyDropRow);
 

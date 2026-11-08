@@ -1,6 +1,6 @@
 # Bottleneck Heatmap
 
-[GitHub releases](https://github.com/urakkaamyx/KingdomInc_BottleneckHeatmap/releases) · [Nexus Mods](https://www.nexusmods.com/kingdominc/mods/21) · Version 1.2.2
+[GitHub releases](https://github.com/urakkaamyx/KingdomInc_BottleneckHeatmap/releases) · [Nexus Mods](https://www.nexusmods.com/kingdominc/mods/21) · Version 1.2.3
 
 Real-time diagnostic heatmap for Kingdom Inc workshops. Color-codes all workshop nodes and connecting pipes with semi-transparent overlays to instantly identify running lines, starved machines, clogged bottlenecks, and full storage containers.
 

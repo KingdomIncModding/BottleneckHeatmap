@@ -1,3 +1,8 @@
+Version 1.2.3:
+- Authentic Game UI Theming: Redesigned the Color Palette Generator popup using vanilla Kingdom Inc modal frame sprites, 9-sliced gold-inlaid borders, native button prefabs, retro pixel fantasy typography, and page-turn sound effects.
+- Fixed Dropdown Text Overlapping: Eliminated multi-line text wrapping and vertical overflow in ModConfig variation dropdowns with single-line auto-sizing and wider anchor allocation.
+- Armory & Stockpile Storage Recognition: Armories (including Hoards, Treasuries, and Pantries) and Stockpiles are correctly evaluated as Full Storage (Purple) at capacity.
+
 Version 1.2.2:
 - Fixed Hotkey Double Trigger: Debounced hotkey toggling and removed duplicate input checking between native InputAction callback and Update() loop to prevent simultaneous on/off double trigger.
 - Unified State Colors Row Layout: Redesigned State Colors & Variations in Foundation ModConfig to match user layout: each state features a live color swatch square on the left, state label, "Pick Color" button, and dynamic variation dropdown on a single horizontal row.
