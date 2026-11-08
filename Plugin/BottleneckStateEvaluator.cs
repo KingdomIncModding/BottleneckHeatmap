@@ -22,10 +22,10 @@ namespace KingdomBottleneckHeatmap
             if (element == null)
                 return BottleneckState.Idle;
 
-            // 0. Storage Containers: when full, mark as FullStorage!
+            // 0. Storage Containers: Stockpiles and Armories (including Hoards, Treasuries, Pantries)
             if (element is Stockpile stockpile)
             {
-                if (stockpile.Contents.Count >= stockpile.Capacity)
+                if (stockpile.Contents != null && stockpile.Contents.Count >= stockpile.Capacity)
                     return BottleneckState.FullStorage;
             }
             if (element is Armory armory)
@@ -33,6 +33,13 @@ namespace KingdomBottleneckHeatmap
                 if (armory.ArmoryType != null && GamePlayer.Current != null &&
                     !GamePlayer.Current.Armory.CanAddTo(armory.Channel, armory.ArmoryType, armory.MaxItems))
                     return BottleneckState.FullStorage;
+            }
+
+            // Shop congestion: when gold cap is reached, shop is clogged
+            if (element is Shop shop)
+            {
+                if (shop.GoldCap > 0 && shop.CollectedGold >= shop.GoldCap)
+                    return BottleneckState.Clogged;
             }
 
             // 1. Output congestion check (highest priority for production: if blocked, it's a bottleneck!)

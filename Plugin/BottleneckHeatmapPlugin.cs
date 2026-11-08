@@ -16,7 +16,7 @@ namespace KingdomBottleneckHeatmap
     public sealed class BottleneckHeatmapPlugin : BaseUnityPlugin
     {
         public const string Id = "urakka.kingdominc.bottleneckheatmap";
-        public const string Version = "1.2.1";
+        public const string Version = "1.2.2";
 
         public static BottleneckHeatmapPlugin Instance { get; private set; }
         public BepInEx.Logging.ManualLogSource Log => Logger;
@@ -42,9 +42,17 @@ namespace KingdomBottleneckHeatmap
 
         Harmony _harmony;
         float _nextSweepTime;
+        float _lastHotkeyToggleTime;
         bool _isListeningForHotkey;
 
         public bool IsListeningForHotkey => _isListeningForHotkey;
+
+        public void ToggleHeatmapFromHotkey()
+        {
+            if (Time.unscaledTime - _lastHotkeyToggleTime < 0.25f) return;
+            _lastHotkeyToggleTime = Time.unscaledTime;
+            SetHeatmapEnabled(!IsHeatmapEnabled, fromUser: true);
+        }
 
         public void StartListeningForHotkey()
         {
@@ -178,12 +186,16 @@ namespace KingdomBottleneckHeatmap
                 return;
             }
 
-            if (Keyboard.current != null && ToggleKeyConfig != null)
+            // If native InputAction is active, it handles hotkey via performed callback
+            if (Patches.HeatmapAction == null || !Patches.HeatmapAction.enabled)
             {
-                var keyControl = Keyboard.current[ToggleKeyConfig.Value];
-                if (keyControl != null && keyControl.wasPressedThisFrame)
+                if (Keyboard.current != null && ToggleKeyConfig != null)
                 {
-                    SetHeatmapEnabled(!IsHeatmapEnabled, fromUser: true);
+                    var keyControl = Keyboard.current[ToggleKeyConfig.Value];
+                    if (keyControl != null && keyControl.wasPressedThisFrame)
+                    {
+                        ToggleHeatmapFromHotkey();
+                    }
                 }
             }
 
@@ -406,7 +418,7 @@ namespace KingdomBottleneckHeatmap
                         {
                             if (Instance != null && !Instance.IsListeningForHotkey)
                             {
-                                Instance.SetHeatmapEnabled(!Instance.IsHeatmapEnabled, fromUser: true);
+                                Instance.ToggleHeatmapFromHotkey();
                             }
                         };
                         HeatmapAction.Enable();

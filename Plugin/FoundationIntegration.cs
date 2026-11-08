@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using KingdomFoundation.Api;
 using TMPro;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 namespace KingdomBottleneckHeatmap
@@ -20,11 +19,11 @@ namespace KingdomBottleneckHeatmap
         public static (string Label, string Hex)[] FullStorageVariations;
         public static (string Label, string Hex)[] IdleVariations;
 
-        static IModConfigDropdown _runningDropdown;
-        static IModConfigDropdown _starvedDropdown;
-        static IModConfigDropdown _cloggedDropdown;
-        static IModConfigDropdown _fullStorageDropdown;
-        static IModConfigDropdown _idleDropdown;
+        static ModConfigStateColorRow _runningRow;
+        static ModConfigStateColorRow _starvedRow;
+        static ModConfigStateColorRow _cloggedRow;
+        static ModConfigStateColorRow _fullStorageRow;
+        static ModConfigStateColorRow _idleRow;
 
         public static (string Label, string Hex)[] GenerateVariations(Color baseColor, string stateName)
         {
@@ -72,7 +71,7 @@ namespace KingdomBottleneckHeatmap
             };
         }
 
-        static int FindColorIndex((string Label, string Hex)[] options, string hex)
+        public static int FindColorIndex((string Label, string Hex)[] options, string hex)
         {
             if (options == null || options.Length == 0 || string.IsNullOrEmpty(hex)) return 0;
             for (int i = 0; i < options.Length; i++)
@@ -82,7 +81,7 @@ namespace KingdomBottleneckHeatmap
             return 0;
         }
 
-        static string[] GetLabels((string Label, string Hex)[] options)
+        public static string[] GetLabels((string Label, string Hex)[] options)
         {
             if (options == null) return new string[0];
             var labels = new string[options.Length];
@@ -126,107 +125,6 @@ namespace KingdomBottleneckHeatmap
                 "Real-time visual diagnostic overlay color-coding nodes and pipes by bottleneck status."
             );
 
-            // Enabled Toggle
-            section.AddToggle(
-                "Enable Heatmap",
-                plugin.IsHeatmapEnabled,
-                val =>
-                {
-                    plugin.SetHeatmapEnabled(val, fromUser: true);
-                },
-                getter: () => plugin.IsHeatmapEnabled
-            );
-
-            // Node Opacity Slider (uses Foundation native ModConfigSlider)
-            section.AddSlider(
-                "Node Overlay Opacity",
-                10f,
-                100f,
-                Mathf.Round(plugin.NodeOpacity * 100f),
-                val =>
-                {
-                    plugin.NodeOpacityConfig.Value = val / 100f;
-                    plugin.Config.Save();
-                    plugin.RefreshAllOverlays();
-                },
-                step: 5f,
-                getter: () => Mathf.Round(plugin.NodeOpacity * 100f),
-                formatValue: val => $"{Mathf.RoundToInt(val)}%"
-            );
-
-            // Pipe Opacity Slider (uses Foundation native ModConfigSlider)
-            section.AddSlider(
-                "Pipe Overlay Opacity",
-                20f,
-                100f,
-                Mathf.Round(plugin.PipeOpacity * 100f),
-                val =>
-                {
-                    plugin.PipeOpacityConfig.Value = val / 100f;
-                    plugin.Config.Save();
-                    plugin.RefreshAllOverlays();
-                },
-                step: 5f,
-                getter: () => Mathf.Round(plugin.PipeOpacity * 100f),
-                formatValue: val => $"{Mathf.RoundToInt(val)}%"
-            );
-
-            // Pipe Glow Width Slider (uses Foundation native ModConfigSlider)
-            section.AddSlider(
-                "Pipe Glow Width",
-                1.0f,
-                2.5f,
-                plugin.PipeWidthMultiplier,
-                val =>
-                {
-                    plugin.PipeWidthConfig.Value = val;
-                    plugin.Config.Save();
-                    plugin.RefreshAllOverlays();
-                },
-                step: 0.1f,
-                getter: () => plugin.PipeWidthMultiplier,
-                formatValue: val => $"{val:0.0}x"
-            );
-
-            // Show Idle
-            section.AddToggle(
-                "Show Idle Elements",
-                plugin.ShowIdle,
-                val =>
-                {
-                    plugin.ShowIdleConfig.Value = val;
-                    plugin.Config.Save();
-                    plugin.RefreshAllOverlays();
-                },
-                getter: () => plugin.ShowIdle
-            );
-
-            // Show Toast Notification on Toggle
-            section.AddToggle(
-                "Show Notification On Toggle",
-                plugin.ShowToastConfig.Value,
-                val =>
-                {
-                    plugin.ShowToastConfig.Value = val;
-                    plugin.Config.Save();
-                },
-                getter: () => plugin.ShowToastConfig.Value
-            );
-
-            // Toggle Hotkey Button (Vanilla-style interactive rebinding)
-            _hotkeyButton = section.AddButton(
-                "Toggle Hotkey",
-                () => plugin.StartListeningForHotkey(),
-                buttonText: $"[ {plugin.ToggleKeyConfig.Value} ]"
-            );
-
-            // Color Palette Generator Button
-            section.AddButton(
-                "Color Palette Wheel",
-                () => ColorPalettePopup.Open(),
-                buttonText: "Open Color Wheel"
-            );
-
             // Initialize dynamic variations based on current saved colors
             Color ParseColor(string hex, Color fallback) =>
                 ColorUtility.TryParseHtmlString(hex, out var c) ? c : fallback;
@@ -243,143 +141,182 @@ namespace KingdomBottleneckHeatmap
             FullStorageVariations = GenerateVariations(cFull, "Full Storage");
             IdleVariations = GenerateVariations(cIdle, "Idle");
 
-            section.AddText("State Colors & Surrounding Hue Variations", isHeader: true);
+            // Section 1: General
+            section.AddText("General", isHeader: true);
 
-            // 1. Running State
-            section.AddButton(
+            section.AddToggle(
+                "Enable Heatmap",
+                plugin.IsHeatmapEnabled,
+                val =>
+                {
+                    plugin.SetHeatmapEnabled(val, fromUser: true);
+                },
+                getter: () => plugin.IsHeatmapEnabled
+            );
+
+            section.AddToggle(
+                "Show Idle Elements",
+                plugin.ShowIdle,
+                val =>
+                {
+                    plugin.ShowIdleConfig.Value = val;
+                    plugin.Config.Save();
+                    plugin.RefreshAllOverlays();
+                },
+                getter: () => plugin.ShowIdle
+            );
+
+            section.AddToggle(
+                "Show Notification On Toggle",
+                plugin.ShowToastConfig.Value,
+                val =>
+                {
+                    plugin.ShowToastConfig.Value = val;
+                    plugin.Config.Save();
+                },
+                getter: () => plugin.ShowToastConfig.Value
+            );
+
+            _hotkeyButton = section.AddButton(
+                "Toggle Hotkey",
+                () => plugin.StartListeningForHotkey(),
+                buttonText: $"[ {plugin.ToggleKeyConfig.Value} ]"
+            );
+
+            // Section 2: Overlay & Visuals
+            section.AddText("Overlay & Visuals", isHeader: true);
+
+            section.AddSlider(
+                "Node Overlay Opacity",
+                10f,
+                100f,
+                Mathf.Round(plugin.NodeOpacity * 100f),
+                val =>
+                {
+                    plugin.NodeOpacityConfig.Value = val / 100f;
+                    plugin.Config.Save();
+                    plugin.RefreshAllOverlays();
+                },
+                step: 5f,
+                getter: () => Mathf.Round(plugin.NodeOpacity * 100f),
+                formatValue: val => $"{Mathf.RoundToInt(val)}%"
+            );
+
+            section.AddSlider(
+                "Pipe Overlay Opacity",
+                20f,
+                100f,
+                Mathf.Round(plugin.PipeOpacity * 100f),
+                val =>
+                {
+                    plugin.PipeOpacityConfig.Value = val / 100f;
+                    plugin.Config.Save();
+                    plugin.RefreshAllOverlays();
+                },
+                step: 5f,
+                getter: () => Mathf.Round(plugin.PipeOpacity * 100f),
+                formatValue: val => $"{Mathf.RoundToInt(val)}%"
+            );
+
+            section.AddSlider(
+                "Pipe Glow Width",
+                1.0f,
+                2.5f,
+                plugin.PipeWidthMultiplier,
+                val =>
+                {
+                    plugin.PipeWidthConfig.Value = val;
+                    plugin.Config.Save();
+                    plugin.RefreshAllOverlays();
+                },
+                step: 0.1f,
+                getter: () => plugin.PipeWidthMultiplier,
+                formatValue: val => $"{val:0.0}x"
+            );
+
+            // Section 3: State Colors & Variations
+            section.AddText("State Colors & Variations", isHeader: true);
+
+            _runningRow = new ModConfigStateColorRow(
+                BottleneckState.Running,
                 "Running Color (Active)",
-                () => ColorPalettePopup.Open(BottleneckState.Running),
-                buttonText: "Pick Color"
-            );
-            _runningDropdown = section.AddDropdown(
-                "Running Variations",
-                GetLabels(RunningVariations),
-                FindColorIndex(RunningVariations, plugin.RunningColorConfig.Value),
-                idx =>
+                RunningVariations,
+                () => plugin.RunningColorConfig.Value,
+                val =>
                 {
-                    if (idx >= 0 && idx < RunningVariations.Length)
-                    {
-                        plugin.RunningColorConfig.Value = RunningVariations[idx].Hex;
-                        plugin.Config.Save();
-                        plugin.UpdateMaterialColors();
-                        plugin.RefreshAllOverlays();
-                    }
-                },
-                getter: () => FindColorIndex(RunningVariations, plugin.RunningColorConfig.Value)
+                    plugin.RunningColorConfig.Value = val;
+                    plugin.Config.Save();
+                    plugin.UpdateMaterialColors();
+                    plugin.RefreshAllOverlays();
+                }
             );
+            section.AddElement(_runningRow);
 
-            // 2. Starved State
-            section.AddButton(
+            _starvedRow = new ModConfigStateColorRow(
+                BottleneckState.Starved,
                 "Starved Color (Waiting)",
-                () => ColorPalettePopup.Open(BottleneckState.Starved),
-                buttonText: "Pick Color"
-            );
-            _starvedDropdown = section.AddDropdown(
-                "Starved Variations",
-                GetLabels(StarvedVariations),
-                FindColorIndex(StarvedVariations, plugin.StarvedColorConfig.Value),
-                idx =>
+                StarvedVariations,
+                () => plugin.StarvedColorConfig.Value,
+                val =>
                 {
-                    if (idx >= 0 && idx < StarvedVariations.Length)
-                    {
-                        plugin.StarvedColorConfig.Value = StarvedVariations[idx].Hex;
-                        plugin.Config.Save();
-                        plugin.UpdateMaterialColors();
-                        plugin.RefreshAllOverlays();
-                    }
-                },
-                getter: () => FindColorIndex(StarvedVariations, plugin.StarvedColorConfig.Value)
+                    plugin.StarvedColorConfig.Value = val;
+                    plugin.Config.Save();
+                    plugin.UpdateMaterialColors();
+                    plugin.RefreshAllOverlays();
+                }
             );
+            section.AddElement(_starvedRow);
 
-            // 3. Clogged State
-            section.AddButton(
+            _cloggedRow = new ModConfigStateColorRow(
+                BottleneckState.Clogged,
                 "Clogged Color (Blocked)",
-                () => ColorPalettePopup.Open(BottleneckState.Clogged),
-                buttonText: "Pick Color"
-            );
-            _cloggedDropdown = section.AddDropdown(
-                "Clogged Variations",
-                GetLabels(CloggedVariations),
-                FindColorIndex(CloggedVariations, plugin.CloggedColorConfig.Value),
-                idx =>
+                CloggedVariations,
+                () => plugin.CloggedColorConfig.Value,
+                val =>
                 {
-                    if (idx >= 0 && idx < CloggedVariations.Length)
-                    {
-                        plugin.CloggedColorConfig.Value = CloggedVariations[idx].Hex;
-                        plugin.Config.Save();
-                        plugin.UpdateMaterialColors();
-                        plugin.RefreshAllOverlays();
-                    }
-                },
-                getter: () => FindColorIndex(CloggedVariations, plugin.CloggedColorConfig.Value)
+                    plugin.CloggedColorConfig.Value = val;
+                    plugin.Config.Save();
+                    plugin.UpdateMaterialColors();
+                    plugin.RefreshAllOverlays();
+                }
             );
+            section.AddElement(_cloggedRow);
 
-            // 4. Full Storage State
-            section.AddButton(
+            _fullStorageRow = new ModConfigStateColorRow(
+                BottleneckState.FullStorage,
                 "Full Storage Color (Containers)",
-                () => ColorPalettePopup.Open(BottleneckState.FullStorage),
-                buttonText: "Pick Color"
-            );
-            _fullStorageDropdown = section.AddDropdown(
-                "Full Storage Variations",
-                GetLabels(FullStorageVariations),
-                FindColorIndex(FullStorageVariations, plugin.FullStorageColorConfig.Value),
-                idx =>
+                FullStorageVariations,
+                () => plugin.FullStorageColorConfig.Value,
+                val =>
                 {
-                    if (idx >= 0 && idx < FullStorageVariations.Length)
-                    {
-                        plugin.FullStorageColorConfig.Value = FullStorageVariations[idx].Hex;
-                        plugin.Config.Save();
-                        plugin.UpdateMaterialColors();
-                        plugin.RefreshAllOverlays();
-                    }
-                },
-                getter: () => FindColorIndex(FullStorageVariations, plugin.FullStorageColorConfig.Value)
+                    plugin.FullStorageColorConfig.Value = val;
+                    plugin.Config.Save();
+                    plugin.UpdateMaterialColors();
+                    plugin.RefreshAllOverlays();
+                }
             );
+            section.AddElement(_fullStorageRow);
 
-            // 5. Idle State
-            section.AddButton(
+            _idleRow = new ModConfigStateColorRow(
+                BottleneckState.Idle,
                 "Idle Color (Dormant)",
-                () => ColorPalettePopup.Open(BottleneckState.Idle),
-                buttonText: "Pick Color"
-            );
-            _idleDropdown = section.AddDropdown(
-                "Idle Variations",
-                GetLabels(IdleVariations),
-                FindColorIndex(IdleVariations, plugin.IdleColorConfig.Value),
-                idx =>
+                IdleVariations,
+                () => plugin.IdleColorConfig.Value,
+                val =>
                 {
-                    if (idx >= 0 && idx < IdleVariations.Length)
-                    {
-                        plugin.IdleColorConfig.Value = IdleVariations[idx].Hex;
-                        plugin.Config.Save();
-                        plugin.UpdateMaterialColors();
-                        plugin.RefreshAllOverlays();
-                    }
-                },
-                getter: () => FindColorIndex(IdleVariations, plugin.IdleColorConfig.Value)
+                    plugin.IdleColorConfig.Value = val;
+                    plugin.Config.Save();
+                    plugin.UpdateMaterialColors();
+                    plugin.RefreshAllOverlays();
+                }
             );
+            section.AddElement(_idleRow);
         }
 
         public static void UpdateDropdownOptions(BottleneckState state, (string Label, string Hex)[] newVariations)
         {
             try
             {
-                IModConfigDropdown dropdown = state switch
-                {
-                    BottleneckState.Running => _runningDropdown,
-                    BottleneckState.Starved => _starvedDropdown,
-                    BottleneckState.Clogged => _cloggedDropdown,
-                    BottleneckState.FullStorage => _fullStorageDropdown,
-                    BottleneckState.Idle => _idleDropdown,
-                    _ => null
-                };
-
-                if (dropdown == null || newVariations == null || newVariations.Length == 0) return;
-
-                string[] labels = GetLabels(newVariations);
-                dropdown.Options = labels;
-
                 var plugin = BottleneckHeatmapPlugin.Instance;
                 string currentHex = state switch
                 {
@@ -391,22 +328,17 @@ namespace KingdomBottleneckHeatmap
                     _ => null
                 };
 
-                int selectedIndex = FindColorIndex(newVariations, currentHex);
-                dropdown.SelectedIndex = selectedIndex;
-
-                // If view is instantiated in Foundation ModConfig, update TMP_Dropdown live
-                if (dropdown is ModConfigDropdown mcd)
+                ModConfigStateColorRow row = state switch
                 {
-                    var field = typeof(ModConfigDropdown).GetField("activeDropdown", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                    var tmp = field?.GetValue(mcd) as TMP_Dropdown;
-                    if (tmp != null)
-                    {
-                        tmp.ClearOptions();
-                        tmp.AddOptions(new List<string>(labels));
-                        tmp.SetValueWithoutNotify(selectedIndex);
-                        tmp.RefreshShownValue();
-                    }
-                }
+                    BottleneckState.Running => _runningRow,
+                    BottleneckState.Starved => _starvedRow,
+                    BottleneckState.Clogged => _cloggedRow,
+                    BottleneckState.FullStorage => _fullStorageRow,
+                    BottleneckState.Idle => _idleRow,
+                    _ => null
+                };
+
+                row?.UpdateVariations(newVariations, currentHex);
             }
             catch
             {
@@ -472,6 +404,164 @@ namespace KingdomBottleneckHeatmap
             {
             }
         }
+    }
+
+    internal sealed class ModConfigStateColorRow : IModConfigElement
+    {
+        public string Id { get; }
+        public bool IsVisible { get; set; } = true;
+        public BottleneckState State { get; }
+        public string Label { get; }
+        public Func<string> HexGetter { get; }
+        public Action<string> HexSetter { get; }
+
+        (string Label, string Hex)[] _variations;
+        Image _swatchImage;
+        TMP_Dropdown _activeDropdown;
+
+        public ModConfigStateColorRow(
+            BottleneckState state,
+            string label,
+            (string Label, string Hex)[] initialVariations,
+            Func<string> hexGetter,
+            Action<string> hexSetter,
+            string id = null)
+        {
+            State = state;
+            Label = label;
+            _variations = initialVariations;
+            HexGetter = hexGetter;
+            HexSetter = hexSetter;
+            Id = id ?? Guid.NewGuid().ToString("N");
+        }
+
+        public GameObject CreateView(IModConfigContext context)
+        {
+            var row = context.Templates.CreateEmptyRow(context.Container, 48f);
+            row.name = $"StateColorRow_{State}";
+
+            string currentHex = HexGetter != null ? HexGetter() : "#FFFFFF";
+            Color curColor = ColorUtility.TryParseHtmlString(currentHex, out var c) ? c : Color.white;
+
+            // 1. Swatch Border
+            var swatchBorderObj = new GameObject("SwatchBorder", typeof(RectTransform), typeof(Image));
+            swatchBorderObj.transform.SetParent(row.transform, false);
+            var sbRt = (RectTransform)swatchBorderObj.transform;
+            sbRt.anchorMin = new Vector2(0f, 0.5f);
+            sbRt.anchorMax = new Vector2(0f, 0.5f);
+            sbRt.pivot = new Vector2(0f, 0.5f);
+            sbRt.anchoredPosition = new Vector2(6f, 0f);
+            sbRt.sizeDelta = new Vector2(24f, 24f);
+            var sbImg = swatchBorderObj.GetComponent<Image>();
+            sbImg.color = new Color(0.36f, 0.32f, 0.24f, 1f);
+
+            // 2. Swatch Image
+            var swatchObj = new GameObject("Swatch", typeof(RectTransform), typeof(Image));
+            swatchObj.transform.SetParent(swatchBorderObj.transform, false);
+            var sRt = (RectTransform)swatchObj.transform;
+            sRt.anchorMin = Vector2.zero;
+            sRt.anchorMax = Vector2.one;
+            sRt.offsetMin = new Vector2(2f, 2f);
+            sRt.offsetMax = new Vector2(-2f, -2f);
+            _swatchImage = swatchObj.GetComponent<Image>();
+            _swatchImage.color = curColor;
+
+            // 3. Row Label
+            var labelObj = new GameObject("RowLabel", typeof(RectTransform), typeof(TextMeshProUGUI));
+            labelObj.transform.SetParent(row.transform, false);
+            var lRt = (RectTransform)labelObj.transform;
+            lRt.anchorMin = new Vector2(0f, 0f);
+            lRt.anchorMax = new Vector2(0.44f, 1f);
+            lRt.offsetMin = new Vector2(36f, 0f);
+            lRt.offsetMax = new Vector2(-4f, 0f);
+            var tmp = labelObj.GetComponent<TextMeshProUGUI>();
+            tmp.fontSize = 15;
+            tmp.fontSizeMin = 11;
+            tmp.fontSizeMax = 16;
+            tmp.enableAutoSizing = true;
+            tmp.alignment = TextAlignmentOptions.MidlineLeft;
+            tmp.raycastTarget = false;
+            tmp.text = Label ?? "";
+
+            // 4. "Pick Color" Button cloned from vanilla
+            var dummyBtnRow = context.Templates.CreateButtonRow(context.Container, "", "Pick Color", () =>
+            {
+                ColorPalettePopup.Open(State);
+            }, out var button, out var btnText);
+
+            var btnObj = button.gameObject;
+            btnObj.transform.SetParent(row.transform, false);
+            var bRt = (RectTransform)btnObj.transform;
+            bRt.anchorMin = new Vector2(0.45f, 0.08f);
+            bRt.anchorMax = new Vector2(0.66f, 0.92f);
+            bRt.offsetMin = Vector2.zero;
+            bRt.offsetMax = Vector2.zero;
+            if (btnText != null)
+            {
+                btnText.text = "Pick Color";
+                btnText.fontSizeMin = 11;
+                btnText.fontSizeMax = 15;
+                btnText.enableAutoSizing = true;
+            }
+            UnityEngine.Object.Destroy(dummyBtnRow);
+
+            // 5. Dropdown cloned from vanilla
+            string[] labels = FoundationIntegration.GetLabels(_variations);
+            int selectedIndex = FoundationIntegration.FindColorIndex(_variations, currentHex);
+
+            var dummyDropRow = context.Templates.CreateDropdownRow(context.Container, "", labels, selectedIndex, idx =>
+            {
+                if (_variations != null && idx >= 0 && idx < _variations.Length)
+                {
+                    string chosenHex = _variations[idx].Hex;
+                    HexSetter?.Invoke(chosenHex);
+                    if (ColorUtility.TryParseHtmlString(chosenHex, out var col) && _swatchImage != null)
+                    {
+                        _swatchImage.color = col;
+                    }
+                }
+            }, out _activeDropdown);
+
+            var dropObj = _activeDropdown.gameObject;
+            dropObj.transform.SetParent(row.transform, false);
+            var dRt = (RectTransform)dropObj.transform;
+            dRt.anchorMin = new Vector2(0.67f, 0.08f);
+            dRt.anchorMax = new Vector2(0.98f, 0.92f);
+            dRt.offsetMin = Vector2.zero;
+            dRt.offsetMax = Vector2.zero;
+            if (_activeDropdown.captionText != null)
+            {
+                _activeDropdown.captionText.fontSizeMin = 9;
+                _activeDropdown.captionText.fontSizeMax = 13;
+                _activeDropdown.captionText.alignment = TextAlignmentOptions.MidlineLeft;
+            }
+            UnityEngine.Object.Destroy(dummyDropRow);
+
+            row.SetActive(IsVisible);
+            return row;
+        }
+
+        public void UpdateVariations((string Label, string Hex)[] newVariations, string currentHex)
+        {
+            _variations = newVariations;
+            if (ColorUtility.TryParseHtmlString(currentHex, out var col) && _swatchImage != null)
+            {
+                _swatchImage.color = col;
+            }
+
+            if (_activeDropdown != null && newVariations != null)
+            {
+                string[] labels = FoundationIntegration.GetLabels(newVariations);
+                int idx = FoundationIntegration.FindColorIndex(newVariations, currentHex);
+                _activeDropdown.ClearOptions();
+                _activeDropdown.AddOptions(new List<string>(labels));
+                _activeDropdown.SetValueWithoutNotify(idx);
+                _activeDropdown.RefreshShownValue();
+            }
+        }
+
+        public void Commit() { }
+        public void Cancel() { }
     }
 
     internal sealed class HeatmapBarElement : ModBarElement
