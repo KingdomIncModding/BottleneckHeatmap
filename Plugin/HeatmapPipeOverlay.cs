@@ -131,7 +131,7 @@ namespace KingdomBottleneckHeatmap
 
             var newState = BottleneckStateEvaluator.Evaluate(_worldPipe, _lastTransferTime, _wasRejected);
 
-            if (newState == BottleneckState.Idle && !plugin.ShowIdle)
+            if (newState == BottleneckState.Idle && !plugin.ShowIdle && plugin.EnableIdleState)
             {
                 if (_overlayLine.enabled) _overlayLine.enabled = false;
                 _currentState = newState;
@@ -141,11 +141,18 @@ namespace KingdomBottleneckHeatmap
             if (force || newState != _currentState || !_overlayLine.enabled)
             {
                 _currentState = newState;
-                RefreshGeometry();
-                _overlayLine.enabled = true;
                 var color = HeatmapMaterials.GetPipeColor(_currentState, plugin.PipeOpacity);
-                _overlayLine.startColor = color;
-                _overlayLine.endColor = color;
+                if (color.a <= 0f)
+                {
+                    _overlayLine.enabled = false;
+                }
+                else
+                {
+                    RefreshGeometry();
+                    _overlayLine.enabled = true;
+                    _overlayLine.startColor = color;
+                    _overlayLine.endColor = color;
+                }
             }
         }
 

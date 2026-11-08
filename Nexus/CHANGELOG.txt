@@ -1,3 +1,8 @@
+Version 1.2.5:
+- Individual State Enable/Disable Checkboxes: Added native gold-bordered checkboxes beside each state (Running, Starved, Clogged, Full Storage, Idle) in Foundation ModConfig.
+- Disabled States Fall Back to Running Color: When a state is unchecked/disabled, its nodes and pipes automatically render in the active Running color (or transparent if Running is disabled), allowing players to selectively filter out specific statuses.
+- Single-Line Row Layout: Checkbox, live color swatch, state label, "Pick Color" button, divider, and variation buttons all remain perfectly aligned on a single horizontal row.
+
 Version 1.2.4:
 - Fixed "Pick Color" Popup Initialization: Replaced prefab instantiation with pure native UI element construction styled with vanilla 9-sliced sprites and pixel typography, and gave the Color Palette Generator its own persistent ScreenSpaceOverlay canvas to ensure the window opens reliably on top of all game and ModConfig menus.
 - Single-Line State Colors & Swatches: Each status row in Foundation ModConfig features a live active color swatch, state label, "Pick Color" button, divider, and 5 horizontal variation hue buttons on one unified line.

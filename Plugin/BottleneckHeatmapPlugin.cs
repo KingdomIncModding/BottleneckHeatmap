@@ -16,7 +16,7 @@ namespace KingdomBottleneckHeatmap
     public sealed class BottleneckHeatmapPlugin : BaseUnityPlugin
     {
         public const string Id = "urakka.kingdominc.bottleneckheatmap";
-        public const string Version = "1.2.4";
+        public const string Version = "1.2.5";
 
         public static BottleneckHeatmapPlugin Instance { get; private set; }
         public BepInEx.Logging.ManualLogSource Log => Logger;
@@ -33,12 +33,22 @@ namespace KingdomBottleneckHeatmap
         public ConfigEntry<string> CloggedColorConfig;
         public ConfigEntry<string> FullStorageColorConfig;
         public ConfigEntry<string> IdleColorConfig;
+        public ConfigEntry<bool> EnableRunningStateConfig;
+        public ConfigEntry<bool> EnableStarvedStateConfig;
+        public ConfigEntry<bool> EnableCloggedStateConfig;
+        public ConfigEntry<bool> EnableFullStorageStateConfig;
+        public ConfigEntry<bool> EnableIdleStateConfig;
 
         public bool IsHeatmapEnabled => EnabledConfig?.Value ?? true;
         public float NodeOpacity => NodeOpacityConfig?.Value ?? 0.58f;
         public float PipeOpacity => PipeOpacityConfig?.Value ?? 0.85f;
         public float PipeWidthMultiplier => PipeWidthConfig?.Value ?? 1.30f;
         public bool ShowIdle => ShowIdleConfig?.Value ?? true;
+        public bool EnableRunningState => EnableRunningStateConfig?.Value ?? true;
+        public bool EnableStarvedState => EnableStarvedStateConfig?.Value ?? true;
+        public bool EnableCloggedState => EnableCloggedStateConfig?.Value ?? true;
+        public bool EnableFullStorageState => EnableFullStorageStateConfig?.Value ?? true;
+        public bool EnableIdleState => EnableIdleStateConfig?.Value ?? true;
 
         Harmony _harmony;
         float _nextSweepTime;
@@ -143,6 +153,31 @@ namespace KingdomBottleneckHeatmap
                 new ConfigDescription("Hex color for idle / dormant nodes and pipes.")
             );
 
+            EnableRunningStateConfig = Config.Bind(
+                "States", "EnableRunningState", true,
+                new ConfigDescription("Whether Running status is highlighted. When disabled, overlay is transparent.")
+            );
+
+            EnableStarvedStateConfig = Config.Bind(
+                "States", "EnableStarvedState", true,
+                new ConfigDescription("Whether Starved status is highlighted. When disabled, displays as Running color.")
+            );
+
+            EnableCloggedStateConfig = Config.Bind(
+                "States", "EnableCloggedState", true,
+                new ConfigDescription("Whether Clogged status is highlighted. When disabled, displays as Running color.")
+            );
+
+            EnableFullStorageStateConfig = Config.Bind(
+                "States", "EnableFullStorageState", true,
+                new ConfigDescription("Whether Full Storage status is highlighted. When disabled, displays as Running color.")
+            );
+
+            EnableIdleStateConfig = Config.Bind(
+                "States", "EnableIdleState", true,
+                new ConfigDescription("Whether Idle status is highlighted. When disabled, displays as Running color.")
+            );
+
             UpdateMaterialColors();
 
             _harmony = new Harmony(Id);
@@ -215,6 +250,12 @@ namespace KingdomBottleneckHeatmap
             Color fullStorage = ColorUtility.TryParseHtmlString(FullStorageColorConfig?.Value, out var c4) ? c4 : new Color(0.69f, 0.26f, 1.00f, 1f);
             Color idle = ColorUtility.TryParseHtmlString(IdleColorConfig?.Value, out var c5) ? c5 : new Color(0.55f, 0.62f, 0.75f, 1f);
 
+            HeatmapMaterials.EnableRunning = EnableRunningState;
+            HeatmapMaterials.EnableStarved = EnableStarvedState;
+            HeatmapMaterials.EnableClogged = EnableCloggedState;
+            HeatmapMaterials.EnableFullStorage = EnableFullStorageState;
+            HeatmapMaterials.EnableIdle = EnableIdleState;
+
             HeatmapMaterials.SetColors(running, starved, clogged, fullStorage, idle);
         }
 
@@ -233,9 +274,9 @@ namespace KingdomBottleneckHeatmap
                 try
                 {
                     string runHex = RunningColorConfig?.Value ?? "#26FA73";
-                    string starvHex = StarvedColorConfig?.Value ?? "#FFD92E";
-                    string clogHex = CloggedColorConfig?.Value ?? "#FF3842";
-                    string fullHex = FullStorageColorConfig?.Value ?? "#B042FF";
+                    string starvHex = (EnableStarvedState ? StarvedColorConfig?.Value : runHex) ?? "#FFD92E";
+                    string clogHex = (EnableCloggedState ? CloggedColorConfig?.Value : runHex) ?? "#FF3842";
+                    string fullHex = (EnableFullStorageState ? FullStorageColorConfig?.Value : runHex) ?? "#B042FF";
 
                     var msgObj = UIStatusMessage.Show(
                         enabled ? "Bottleneck Heatmap: Active" : "Bottleneck Heatmap: Disabled",

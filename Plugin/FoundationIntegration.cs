@@ -244,6 +244,14 @@ namespace KingdomBottleneckHeatmap
                 BottleneckState.Running,
                 "Running Color (Active)",
                 RunningVariations,
+                () => plugin.EnableRunningState,
+                val =>
+                {
+                    plugin.EnableRunningStateConfig.Value = val;
+                    plugin.Config.Save();
+                    plugin.UpdateMaterialColors();
+                    plugin.RefreshAllOverlays();
+                },
                 () => plugin.RunningColorConfig.Value,
                 val =>
                 {
@@ -259,6 +267,14 @@ namespace KingdomBottleneckHeatmap
                 BottleneckState.Starved,
                 "Starved Color (Waiting)",
                 StarvedVariations,
+                () => plugin.EnableStarvedState,
+                val =>
+                {
+                    plugin.EnableStarvedStateConfig.Value = val;
+                    plugin.Config.Save();
+                    plugin.UpdateMaterialColors();
+                    plugin.RefreshAllOverlays();
+                },
                 () => plugin.StarvedColorConfig.Value,
                 val =>
                 {
@@ -274,6 +290,14 @@ namespace KingdomBottleneckHeatmap
                 BottleneckState.Clogged,
                 "Clogged Color (Blocked)",
                 CloggedVariations,
+                () => plugin.EnableCloggedState,
+                val =>
+                {
+                    plugin.EnableCloggedStateConfig.Value = val;
+                    plugin.Config.Save();
+                    plugin.UpdateMaterialColors();
+                    plugin.RefreshAllOverlays();
+                },
                 () => plugin.CloggedColorConfig.Value,
                 val =>
                 {
@@ -289,6 +313,14 @@ namespace KingdomBottleneckHeatmap
                 BottleneckState.FullStorage,
                 "Full Storage Color (Containers)",
                 FullStorageVariations,
+                () => plugin.EnableFullStorageState,
+                val =>
+                {
+                    plugin.EnableFullStorageStateConfig.Value = val;
+                    plugin.Config.Save();
+                    plugin.UpdateMaterialColors();
+                    plugin.RefreshAllOverlays();
+                },
                 () => plugin.FullStorageColorConfig.Value,
                 val =>
                 {
@@ -304,6 +336,14 @@ namespace KingdomBottleneckHeatmap
                 BottleneckState.Idle,
                 "Idle Color (Dormant)",
                 IdleVariations,
+                () => plugin.EnableIdleState,
+                val =>
+                {
+                    plugin.EnableIdleStateConfig.Value = val;
+                    plugin.Config.Save();
+                    plugin.UpdateMaterialColors();
+                    plugin.RefreshAllOverlays();
+                },
                 () => plugin.IdleColorConfig.Value,
                 val =>
                 {
@@ -411,7 +451,7 @@ namespace KingdomBottleneckHeatmap
 
     /// <summary>
     /// Custom row element displaying:
-    /// [Active Swatch] Label    [Pick Color Button]  |  [Var1][Var2][Var3][Var4][Var5]
+    /// [Toggle Checkbox] [Active Swatch] Label    [Pick Color Button]  |  [Var1][Var2][Var3][Var4][Var5]
     /// Completely matches user mockup image on a single unified line!
     /// </summary>
     internal sealed class ModConfigStateColorRow : IModConfigElement
@@ -420,6 +460,8 @@ namespace KingdomBottleneckHeatmap
         public bool IsVisible { get; set; } = true;
         public BottleneckState State { get; }
         public string Label { get; }
+        public Func<bool> EnabledGetter { get; }
+        public Action<bool> EnabledSetter { get; }
         public Func<string> HexGetter { get; }
         public Action<string> HexSetter { get; }
 
@@ -432,6 +474,8 @@ namespace KingdomBottleneckHeatmap
             BottleneckState state,
             string label,
             (string Label, string Hex)[] initialVariations,
+            Func<bool> enabledGetter,
+            Action<bool> enabledSetter,
             Func<string> hexGetter,
             Action<string> hexSetter,
             string id = null)
@@ -439,6 +483,8 @@ namespace KingdomBottleneckHeatmap
             State = state;
             Label = label;
             _variations = initialVariations;
+            EnabledGetter = enabledGetter;
+            EnabledSetter = enabledSetter;
             HexGetter = hexGetter;
             HexSetter = hexSetter;
             Id = id ?? Guid.NewGuid().ToString("N");
@@ -451,18 +497,39 @@ namespace KingdomBottleneckHeatmap
             var row = context.Templates.CreateEmptyRow(context.Container, 46f);
             row.name = $"StateColorRow_{State}";
 
+            bool isEnabled = EnabledGetter != null ? EnabledGetter() : true;
             string currentHex = HexGetter != null ? HexGetter() : "#FFFFFF";
             Color curColor = ColorUtility.TryParseHtmlString(currentHex, out var c) ? c : Color.white;
 
-            // 1. Left Swatch Border (24x24)
+            // 1. Toggle Checkbox cloned from vanilla template
+            var dummyToggleRow = context.Templates.CreateToggleRow(context.Container, "", isEnabled, null, out var toggle);
+            var toggleObj = toggle.gameObject;
+            toggleObj.transform.SetParent(row.transform, false);
+            var tRt = (RectTransform)toggleObj.transform;
+            tRt.anchorMin = new Vector2(0f, 0.5f);
+            tRt.anchorMax = new Vector2(0f, 0.5f);
+            tRt.pivot = new Vector2(0f, 0.5f);
+            tRt.anchoredPosition = new Vector2(6f, 0f);
+            tRt.sizeDelta = new Vector2(24f, 24f);
+
+            toggle.onValueChanged = new Toggle.ToggleEvent();
+            toggle.SetIsOnWithoutNotify(isEnabled);
+            toggle.onValueChanged.AddListener(val =>
+            {
+                UISounds.CraftStep();
+                EnabledSetter?.Invoke(val);
+            });
+            UnityEngine.Object.Destroy(dummyToggleRow);
+
+            // 2. Left Swatch Border (22x22)
             var swatchBorderObj = new GameObject("SwatchBorder", typeof(RectTransform), typeof(Image));
             swatchBorderObj.transform.SetParent(row.transform, false);
             var sbRt = (RectTransform)swatchBorderObj.transform;
             sbRt.anchorMin = new Vector2(0f, 0.5f);
             sbRt.anchorMax = new Vector2(0f, 0.5f);
             sbRt.pivot = new Vector2(0f, 0.5f);
-            sbRt.anchoredPosition = new Vector2(6f, 0f);
-            sbRt.sizeDelta = new Vector2(24f, 24f);
+            sbRt.anchoredPosition = new Vector2(36f, 0f);
+            sbRt.sizeDelta = new Vector2(22f, 22f);
             var sbImg = swatchBorderObj.GetComponent<Image>();
             sbImg.color = new Color(0.36f, 0.32f, 0.24f, 1f);
 
@@ -477,13 +544,13 @@ namespace KingdomBottleneckHeatmap
             _leftSwatchImage = swatchObj.GetComponent<Image>();
             _leftSwatchImage.color = curColor;
 
-            // 2. Row Label
+            // 3. Row Label
             var labelObj = new GameObject("RowLabel", typeof(RectTransform), typeof(TextMeshProUGUI));
             labelObj.transform.SetParent(row.transform, false);
             var lRt = (RectTransform)labelObj.transform;
             lRt.anchorMin = new Vector2(0f, 0f);
             lRt.anchorMax = new Vector2(0.40f, 1f);
-            lRt.offsetMin = new Vector2(36f, 0f);
+            lRt.offsetMin = new Vector2(64f, 0f);
             lRt.offsetMax = new Vector2(-4f, 0f);
             var tmp = labelObj.GetComponent<TextMeshProUGUI>();
             if (VanillaTheme.Font != null)
@@ -491,9 +558,9 @@ namespace KingdomBottleneckHeatmap
                 tmp.font = VanillaTheme.Font;
                 tmp.fontSharedMaterial = VanillaTheme.FontMaterial;
             }
-            tmp.fontSize = 15f;
+            tmp.fontSize = 14f;
             tmp.fontSizeMin = 10f;
-            tmp.fontSizeMax = 16f;
+            tmp.fontSizeMax = 15f;
             tmp.enableAutoSizing = true;
             tmp.alignment = TextAlignmentOptions.MidlineLeft;
             tmp.raycastTarget = false;
@@ -861,11 +928,11 @@ namespace KingdomBottleneckHeatmap
 
         void UpdateColors()
         {
-            if (_swatchRunning) _swatchRunning.color = HeatmapMaterials.RunningColor;
-            if (_swatchStarved) _swatchStarved.color = HeatmapMaterials.StarvedColor;
-            if (_swatchClogged) _swatchClogged.color = HeatmapMaterials.CloggedColor;
-            if (_swatchFullStorage) _swatchFullStorage.color = HeatmapMaterials.FullStorageColor;
-            if (_swatchIdle) _swatchIdle.color = HeatmapMaterials.IdleColor;
+            if (_swatchRunning) _swatchRunning.color = HeatmapMaterials.GetEffectiveStateColor(BottleneckState.Running);
+            if (_swatchStarved) _swatchStarved.color = HeatmapMaterials.GetEffectiveStateColor(BottleneckState.Starved);
+            if (_swatchClogged) _swatchClogged.color = HeatmapMaterials.GetEffectiveStateColor(BottleneckState.Clogged);
+            if (_swatchFullStorage) _swatchFullStorage.color = HeatmapMaterials.GetEffectiveStateColor(BottleneckState.FullStorage);
+            if (_swatchIdle) _swatchIdle.color = HeatmapMaterials.GetEffectiveStateColor(BottleneckState.Idle);
         }
 
         void PositionAt(RectTransform anchor)

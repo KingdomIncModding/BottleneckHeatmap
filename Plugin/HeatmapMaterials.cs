@@ -13,6 +13,12 @@ namespace KingdomBottleneckHeatmap
         public static Color FullStorageColor = new Color(0.69f, 0.26f, 1.00f, 1f); // Default vibrant royal purple
         public static Color IdleColor = new Color(0.55f, 0.62f, 0.75f, 1f);
 
+        public static bool EnableRunning = true;
+        public static bool EnableStarved = true;
+        public static bool EnableClogged = true;
+        public static bool EnableFullStorage = true;
+        public static bool EnableIdle = true;
+
         public static Material LineMaterial
         {
             get
@@ -41,49 +47,94 @@ namespace KingdomBottleneckHeatmap
             IdleColor = idle;
         }
 
-        public static Color GetNodeColor(BottleneckState state, float opacity)
+        public static Color GetEffectiveStateColor(BottleneckState state)
         {
-            Color baseCol = state switch
+            Color effectiveRunning = EnableRunning ? RunningColor : Color.clear;
+
+            return state switch
             {
-                BottleneckState.Running => RunningColor,
-                BottleneckState.Starved => StarvedColor,
-                BottleneckState.Clogged => CloggedColor,
-                BottleneckState.FullStorage => FullStorageColor,
-                BottleneckState.Idle => IdleColor,
+                BottleneckState.Running => effectiveRunning,
+                BottleneckState.Starved => EnableStarved ? StarvedColor : effectiveRunning,
+                BottleneckState.Clogged => EnableClogged ? CloggedColor : effectiveRunning,
+                BottleneckState.FullStorage => EnableFullStorage ? FullStorageColor : effectiveRunning,
+                BottleneckState.Idle => EnableIdle ? IdleColor : effectiveRunning,
                 _ => Color.clear
             };
+        }
 
-            float alphaMult = state switch
+        public static Color GetNodeColor(BottleneckState state, float opacity)
+        {
+            Color effectiveRunning = EnableRunning ? RunningColor : Color.clear;
+            Color baseCol;
+            float alphaMult;
+
+            switch (state)
             {
-                BottleneckState.Clogged => 1.15f,
-                BottleneckState.FullStorage => 1.10f,
-                BottleneckState.Idle => 0.40f,
-                _ => 1.0f
-            };
+                case BottleneckState.Running:
+                    baseCol = effectiveRunning;
+                    alphaMult = 1.0f;
+                    break;
+                case BottleneckState.Starved:
+                    baseCol = EnableStarved ? StarvedColor : effectiveRunning;
+                    alphaMult = 1.0f;
+                    break;
+                case BottleneckState.Clogged:
+                    baseCol = EnableClogged ? CloggedColor : effectiveRunning;
+                    alphaMult = EnableClogged ? 1.15f : 1.0f;
+                    break;
+                case BottleneckState.FullStorage:
+                    baseCol = EnableFullStorage ? FullStorageColor : effectiveRunning;
+                    alphaMult = EnableFullStorage ? 1.10f : 1.0f;
+                    break;
+                case BottleneckState.Idle:
+                    baseCol = EnableIdle ? IdleColor : effectiveRunning;
+                    alphaMult = EnableIdle ? 0.40f : 1.0f;
+                    break;
+                default:
+                    baseCol = Color.clear;
+                    alphaMult = 0f;
+                    break;
+            }
 
+            if (baseCol == Color.clear || baseCol.a <= 0f) return Color.clear;
             return new Color(baseCol.r, baseCol.g, baseCol.b, Mathf.Clamp01(opacity * alphaMult));
         }
 
         public static Color GetPipeColor(BottleneckState state, float opacity)
         {
-            Color baseCol = state switch
-            {
-                BottleneckState.Running => RunningColor,
-                BottleneckState.Starved => StarvedColor,
-                BottleneckState.Clogged => CloggedColor,
-                BottleneckState.FullStorage => FullStorageColor,
-                BottleneckState.Idle => IdleColor,
-                _ => Color.clear
-            };
+            Color effectiveRunning = EnableRunning ? RunningColor : Color.clear;
+            Color baseCol;
+            float alphaMult;
 
-            float alphaMult = state switch
+            switch (state)
             {
-                BottleneckState.Clogged => 1.15f,
-                BottleneckState.FullStorage => 1.10f,
-                BottleneckState.Idle => 0.40f,
-                _ => 1.0f
-            };
+                case BottleneckState.Running:
+                    baseCol = effectiveRunning;
+                    alphaMult = 1.0f;
+                    break;
+                case BottleneckState.Starved:
+                    baseCol = EnableStarved ? StarvedColor : effectiveRunning;
+                    alphaMult = 1.0f;
+                    break;
+                case BottleneckState.Clogged:
+                    baseCol = EnableClogged ? CloggedColor : effectiveRunning;
+                    alphaMult = EnableClogged ? 1.15f : 1.0f;
+                    break;
+                case BottleneckState.FullStorage:
+                    baseCol = EnableFullStorage ? FullStorageColor : effectiveRunning;
+                    alphaMult = EnableFullStorage ? 1.10f : 1.0f;
+                    break;
+                case BottleneckState.Idle:
+                    baseCol = EnableIdle ? IdleColor : effectiveRunning;
+                    alphaMult = EnableIdle ? 0.40f : 1.0f;
+                    break;
+                default:
+                    baseCol = Color.clear;
+                    alphaMult = 0f;
+                    break;
+            }
 
+            if (baseCol == Color.clear || baseCol.a <= 0f) return Color.clear;
             return new Color(baseCol.r, baseCol.g, baseCol.b, Mathf.Clamp01(opacity * alphaMult));
         }
 

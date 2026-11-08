@@ -97,7 +97,7 @@ namespace KingdomBottleneckHeatmap
 
             var newState = BottleneckStateEvaluator.Evaluate(_world);
 
-            if (newState == BottleneckState.Idle && !plugin.ShowIdle)
+            if (newState == BottleneckState.Idle && !plugin.ShowIdle && plugin.EnableIdleState)
             {
                 if (_overlayImage.enabled) _overlayImage.enabled = false;
                 _currentState = newState;
@@ -107,8 +107,16 @@ namespace KingdomBottleneckHeatmap
             if (force || newState != _currentState || !_overlayImage.enabled)
             {
                 _currentState = newState;
-                _overlayImage.enabled = true;
-                _overlayImage.color = HeatmapMaterials.GetNodeColor(_currentState, plugin.NodeOpacity);
+                var col = HeatmapMaterials.GetNodeColor(_currentState, plugin.NodeOpacity);
+                if (col.a <= 0f)
+                {
+                    _overlayImage.enabled = false;
+                }
+                else
+                {
+                    _overlayImage.enabled = true;
+                    _overlayImage.color = col;
+                }
             }
         }
 
