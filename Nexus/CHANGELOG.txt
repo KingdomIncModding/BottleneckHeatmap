@@ -1,3 +1,9 @@
+Version 1.2.0:
+- Foundation ModConfig Sliders: Replaced opacity dropdowns with native Foundation ModConfigElements percent sliders for Node Overlay Opacity (10%-100%), Pipe Overlay Opacity (20%-100%), and Pipe Glow Width (1.0x-2.5x).
+- Vanilla Hotkey Setup: Interactive keybinding matching vanilla Controls menu. Click to rebind with any keyboard key (Escape to cancel), with full integration into Kingdom Inc's native Key Bindings menu.
+- Color Palette Generator Popup: Pick any base color using live Saturation/Brightness and Hue surfaces or preset swatches, and the mod automatically computes and previews the 5 surrounding hues (Running, Starved, Clogged, Full Storage, Idle).
+- Right-Click Mod Bar Shortcut: Right-click the Heatmap toggle button on the Mod Bar to open the Color Palette Generator directly from the workshop HUD.
+
 Version 1.1.2:
 - Fixed toast notification rich text parsing: directly assign TextMeshPro text on UIStatusMessage to prevent Kingdom Inc's localization regex (#highlight# syntax) from corrupting hex color tags into literal text.
 

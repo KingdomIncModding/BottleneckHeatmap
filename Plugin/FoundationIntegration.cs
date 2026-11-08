@@ -11,6 +11,7 @@ namespace KingdomBottleneckHeatmap
     {
         static IModBarRegistration _barRegistration;
         static HeatmapBarView _activeView;
+        static IModConfigButton _hotkeyButton;
 
         static readonly (string Label, Key Key)[] HotkeyOptions = new (string, Key)[]
         {
@@ -155,55 +156,55 @@ namespace KingdomBottleneckHeatmap
                 getter: () => plugin.IsHeatmapEnabled
             );
 
-            // Node Opacity Dropdown
-            string[] nodeOpacities = { "35% (Subtle)", "58% (Vibrant - Default)", "75% (Bright)", "90% (High Contrast)" };
-            int currentNodeIdx = plugin.NodeOpacity >= 0.82f ? 3 : (plugin.NodeOpacity >= 0.68f ? 2 : (plugin.NodeOpacity >= 0.45f ? 1 : 0));
-            section.AddDropdown(
+            // Node Opacity Slider
+            section.AddSlider(
                 "Node Overlay Opacity",
-                nodeOpacities,
-                currentNodeIdx,
-                idx =>
+                10f,
+                100f,
+                Mathf.Round(plugin.NodeOpacity * 100f),
+                val =>
                 {
-                    float op = idx switch { 0 => 0.35f, 1 => 0.58f, 2 => 0.75f, _ => 0.90f };
-                    plugin.NodeOpacityConfig.Value = op;
+                    plugin.NodeOpacityConfig.Value = val / 100f;
                     plugin.Config.Save();
                     plugin.RefreshAllOverlays();
                 },
-                getter: () => plugin.NodeOpacity >= 0.82f ? 3 : (plugin.NodeOpacity >= 0.68f ? 2 : (plugin.NodeOpacity >= 0.45f ? 1 : 0))
+                step: 5f,
+                getter: () => Mathf.Round(plugin.NodeOpacity * 100f),
+                formatValue: val => $"{Mathf.RoundToInt(val)}%"
             );
 
-            // Pipe Opacity Dropdown
-            string[] pipeOpacities = { "50% (Subtle)", "70% (Clear)", "85% (Glowing - Default)", "100% (Solid)" };
-            int currentPipeIdx = plugin.PipeOpacity >= 0.95f ? 3 : (plugin.PipeOpacity >= 0.78f ? 2 : (plugin.PipeOpacity >= 0.60f ? 1 : 0));
-            section.AddDropdown(
+            // Pipe Opacity Slider
+            section.AddSlider(
                 "Pipe Overlay Opacity",
-                pipeOpacities,
-                currentPipeIdx,
-                idx =>
+                20f,
+                100f,
+                Mathf.Round(plugin.PipeOpacity * 100f),
+                val =>
                 {
-                    float op = idx switch { 0 => 0.50f, 1 => 0.70f, 2 => 0.85f, _ => 1.00f };
-                    plugin.PipeOpacityConfig.Value = op;
+                    plugin.PipeOpacityConfig.Value = val / 100f;
                     plugin.Config.Save();
                     plugin.RefreshAllOverlays();
                 },
-                getter: () => plugin.PipeOpacity >= 0.95f ? 3 : (plugin.PipeOpacity >= 0.78f ? 2 : (plugin.PipeOpacity >= 0.60f ? 1 : 0))
+                step: 5f,
+                getter: () => Mathf.Round(plugin.PipeOpacity * 100f),
+                formatValue: val => $"{Mathf.RoundToInt(val)}%"
             );
 
-            // Pipe Width Scale Dropdown
-            string[] widthOptions = { "1.0x (Exact Pipe Width)", "1.3x (Subtle Halo)", "1.6x (Prominent)", "2.0x (Bold Glow)" };
-            int currentWidthIdx = plugin.PipeWidthMultiplier >= 1.9f ? 3 : (plugin.PipeWidthMultiplier >= 1.5f ? 2 : (plugin.PipeWidthMultiplier >= 1.2f ? 1 : 0));
-            section.AddDropdown(
+            // Pipe Glow Width Slider
+            section.AddSlider(
                 "Pipe Glow Width",
-                widthOptions,
-                currentWidthIdx,
-                idx =>
+                1.0f,
+                2.5f,
+                plugin.PipeWidthMultiplier,
+                val =>
                 {
-                    float w = idx switch { 0 => 1.0f, 1 => 1.3f, 2 => 1.6f, _ => 2.0f };
-                    plugin.PipeWidthConfig.Value = w;
+                    plugin.PipeWidthConfig.Value = val;
                     plugin.Config.Save();
                     plugin.RefreshAllOverlays();
                 },
-                getter: () => plugin.PipeWidthMultiplier >= 1.9f ? 3 : (plugin.PipeWidthMultiplier >= 1.5f ? 2 : (plugin.PipeWidthMultiplier >= 1.2f ? 1 : 0))
+                step: 0.1f,
+                getter: () => plugin.PipeWidthMultiplier,
+                formatValue: val => $"{val:0.0}x"
             );
 
             // Show Idle
@@ -231,23 +232,18 @@ namespace KingdomBottleneckHeatmap
                 getter: () => plugin.ShowToastConfig.Value
             );
 
-            // Toggle Hotkey Dropdown
-            var hotkeyLabels = new string[HotkeyOptions.Length];
-            for (int i = 0; i < HotkeyOptions.Length; i++) hotkeyLabels[i] = HotkeyOptions[i].Label;
-
-            section.AddDropdown(
+            // Toggle Hotkey Button (Vanilla-style interactive rebinding)
+            _hotkeyButton = section.AddButton(
                 "Toggle Hotkey",
-                hotkeyLabels,
-                FindKeyIndex(plugin.ToggleKeyConfig.Value),
-                idx =>
-                {
-                    if (idx >= 0 && idx < HotkeyOptions.Length)
-                    {
-                        plugin.ToggleKeyConfig.Value = HotkeyOptions[idx].Key;
-                        plugin.Config.Save();
-                    }
-                },
-                getter: () => FindKeyIndex(plugin.ToggleKeyConfig.Value)
+                () => plugin.StartListeningForHotkey(),
+                buttonText: $"[ {plugin.ToggleKeyConfig.Value} ]"
+            );
+
+            // Color Palette Generator Button
+            section.AddButton(
+                "Color Palette Generator",
+                () => ColorPalettePopup.Open(),
+                buttonText: "Open Color Wheel"
             );
 
             // Running Color Dropdown
@@ -362,6 +358,20 @@ namespace KingdomBottleneckHeatmap
             _barRegistration = FoundationApi.ModBar.Register(element);
         }
 
+        public static void UpdateHotkeyButtonText(string text)
+        {
+            try
+            {
+                if (_hotkeyButton != null)
+                {
+                    _hotkeyButton.ButtonText = text;
+                }
+            }
+            catch
+            {
+            }
+        }
+
         public static void SyncModBarToggle(bool enabled)
         {
             try
@@ -417,6 +427,9 @@ namespace KingdomBottleneckHeatmap
         {
             _plugin = plugin;
             _button = context.CreateButton(GetLabel(), OnClick);
+            var clickHandler = _button.gameObject.AddComponent<HeatmapBarClickHandler>();
+            clickHandler.OnRightClick = () => ColorPalettePopup.Open();
+
             _image = _button.GetComponent<Image>();
             _text = _button.GetComponentInChildren<TMP_Text>(true);
             if (_text != null)
@@ -466,6 +479,19 @@ namespace KingdomBottleneckHeatmap
         public void Dispose()
         {
             FoundationIntegration.ClearActiveView(this);
+        }
+    }
+
+    internal sealed class HeatmapBarClickHandler : MonoBehaviour, UnityEngine.EventSystems.IPointerClickHandler
+    {
+        public Action OnRightClick;
+
+        public void OnPointerClick(UnityEngine.EventSystems.PointerEventData eventData)
+        {
+            if (eventData.button == UnityEngine.EventSystems.PointerEventData.InputButton.Right)
+            {
+                OnRightClick?.Invoke();
+            }
         }
     }
 }

@@ -16,7 +16,7 @@ namespace KingdomBottleneckHeatmap
     public sealed class BottleneckHeatmapPlugin : BaseUnityPlugin
     {
         public const string Id = "urakka.kingdominc.bottleneckheatmap";
-        public const string Version = "1.1.2";
+        public const string Version = "1.2.0";
 
         public static BottleneckHeatmapPlugin Instance { get; private set; }
         public BepInEx.Logging.ManualLogSource Log => Logger;
@@ -42,6 +42,34 @@ namespace KingdomBottleneckHeatmap
 
         Harmony _harmony;
         float _nextSweepTime;
+        bool _isListeningForHotkey;
+
+        public bool IsListeningForHotkey => _isListeningForHotkey;
+
+        public void StartListeningForHotkey()
+        {
+            _isListeningForHotkey = true;
+            FoundationIntegration.UpdateHotkeyButtonText("[ Press Any Key... ]");
+        }
+
+        public void StopListeningForHotkey(bool cancelled = false)
+        {
+            _isListeningForHotkey = false;
+            FoundationIntegration.UpdateHotkeyButtonText($"[ {ToggleKeyConfig.Value} ]");
+        }
+
+        public void SyncVanillaActionBinding()
+        {
+            try
+            {
+                if (Patches.HeatmapAction != null)
+                {
+                    string path = $"<Keyboard>/{ToggleKeyConfig.Value.ToString().ToLowerInvariant()}";
+                    Patches.HeatmapAction.ApplyBindingOverride(0, path);
+                }
+            }
+            catch { }
+        }
 
         void Awake()
         {
@@ -124,6 +152,32 @@ namespace KingdomBottleneckHeatmap
 
         void Update()
         {
+            if (_isListeningForHotkey)
+            {
+                if (Keyboard.current != null)
+                {
+                    if (Keyboard.current.escapeKey.wasPressedThisFrame)
+                    {
+                        StopListeningForHotkey(true);
+                    }
+                    else
+                    {
+                        foreach (var key in Keyboard.current.allKeys)
+                        {
+                            if (key.wasPressedThisFrame && key.keyCode != Key.None && key.keyCode != Key.Escape)
+                            {
+                                ToggleKeyConfig.Value = key.keyCode;
+                                Config.Save();
+                                SyncVanillaActionBinding();
+                                StopListeningForHotkey(false);
+                                break;
+                            }
+                        }
+                    }
+                }
+                return;
+            }
+
             if (Keyboard.current != null && ToggleKeyConfig != null)
             {
                 var keyControl = Keyboard.current[ToggleKeyConfig.Value];
@@ -271,6 +325,19 @@ namespace KingdomBottleneckHeatmap
                 AccessTools.Method(typeof(WorldFlowManager), nameof(WorldFlowManager.ShowFlow)),
                 postfix: new HarmonyMethod(typeof(Patches), nameof(Patches.ShowFlowPostfix))
             );
+
+            // Hook vanilla Key Bindings
+            var playerInputAwake = AccessTools.Method(typeof(Assets.Behaviour.Input.PlayerInput), "Awake");
+            if (playerInputAwake != null)
+            {
+                _harmony.Patch(playerInputAwake, postfix: new HarmonyMethod(typeof(Patches), nameof(Patches.PlayerInputAwakePostfix)));
+            }
+
+            var keyBindingRowSetBinding = AccessTools.Method(typeof(Assets.Behaviour.UI.MainMenu.KeyBindingRow), nameof(Assets.Behaviour.UI.MainMenu.KeyBindingRow.SetBinding));
+            if (keyBindingRowSetBinding != null)
+            {
+                _harmony.Patch(keyBindingRowSetBinding, postfix: new HarmonyMethod(typeof(Patches), nameof(Patches.KeyBindingRowSetBindingPostfix)));
+            }
         }
 
         void OnDestroy()
@@ -322,6 +389,48 @@ namespace KingdomBottleneckHeatmap
             public static void ShowFlowPostfix()
             {
                 Instance?.RefreshAllOverlays();
+            }
+
+            public static InputAction HeatmapAction;
+
+            public static void PlayerInputAwakePostfix()
+            {
+                try
+                {
+                    if (HeatmapAction == null)
+                    {
+                        var plugin = Instance;
+                        string keyName = plugin?.ToggleKeyConfig?.Value.ToString().ToLowerInvariant() ?? "h";
+                        HeatmapAction = new InputAction("BottleneckHeatmapToggle", InputActionType.Button, $"<Keyboard>/{keyName}");
+                        HeatmapAction.performed += ctx =>
+                        {
+                            if (Instance != null && !Instance.IsListeningForHotkey)
+                            {
+                                Instance.SetHeatmapEnabled(!Instance.IsHeatmapEnabled, fromUser: true);
+                            }
+                        };
+                        HeatmapAction.Enable();
+                    }
+
+                    var list = Assets.Behaviour.Input.PlayerInput.RebindableKeys as System.Collections.Generic.List<InputAction>;
+                    if (list != null && !list.Contains(HeatmapAction))
+                    {
+                        list.Add(HeatmapAction);
+                    }
+                }
+                catch { }
+            }
+
+            public static void KeyBindingRowSetBindingPostfix(Assets.Behaviour.UI.MainMenu.KeyBindingRow __instance, InputAction binding)
+            {
+                if (binding != null && binding.name == "BottleneckHeatmapToggle")
+                {
+                    var label = AccessTools.Field(typeof(Assets.Behaviour.UI.MainMenu.KeyBindingRow), "_label")?.GetValue(__instance) as TMPro.TMP_Text;
+                    if (label != null)
+                    {
+                        label.text = "Bottleneck Heatmap";
+                    }
+                }
             }
         }
     }

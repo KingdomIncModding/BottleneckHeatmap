@@ -1,6 +1,6 @@
 # Bottleneck Heatmap
 
-[GitHub releases](https://github.com/urakkaamyx/KingdomInc_BottleneckHeatmap/releases) · [Nexus Mods](https://www.nexusmods.com/kingdominc/mods/21) · Version 1.1.2
+[GitHub releases](https://github.com/urakkaamyx/KingdomInc_BottleneckHeatmap/releases) · [Nexus Mods](https://www.nexusmods.com/kingdominc/mods/21) · Version 1.2.0
 
 Real-time diagnostic heatmap for Kingdom Inc workshops. Color-codes all workshop nodes and connecting pipes with semi-transparent overlays to instantly identify running lines, starved machines, clogged bottlenecks, and full storage containers.
 
@@ -13,10 +13,14 @@ Real-time diagnostic heatmap for Kingdom Inc workshops. Color-codes all workshop
   - 🔴 **Clogged (Crimson Coral):** Downstream output buffer full, item rejected, or jammed pipe connections.
   - 🟣 **Full Storage (Royal Purple):** Storage containers (Stockpiles and global Armories) that have reached maximum capacity.
   - ⚪ **Idle (Slate):** Unconfigured recipes, dormant machines, or empty/dead pipe branches.
-- **Instant Hotkey Toggle:** Press `H` (configurable) at any time to toggle the heatmap on or off.
-- **Foundation Integration:**
-  - Automatically adds an aligned **Heatmap: ON / OFF** toggle button directly onto the in-game **Mod Bar** without text clipping or ellipsis.
-  - Adds full settings under **Mod Config**: select your Toggle Hotkey, pick custom colors for all 5 bottleneck states, adjust node overlay opacity, tune pipe glow opacity and width, toggle idle visibility, and configure notifications.
+- **Color Palette Generator:**
+  - Select any base color using interactive Hue and Saturation/Brightness surfaces, preset swatches, or hex code.
+  - Automatically computes and previews the 5 harmonious surrounding hues across all states.
+  - Accessible via Foundation Mod Config or by **Right-Clicking** the Heatmap button on the Mod Bar!
+- **Foundation Mod Config Integration:**
+  - **Percent Sliders** using Foundation's native `ModConfigSlider` for Node Overlay Opacity (10%–100%) and Pipe Overlay Opacity (20%–100%).
+  - **Width Slider** for Pipe Glow Width (1.0x–2.5x).
+  - **Vanilla Hotkey Setup:** Interactive key rebinding button in Mod Config, also integrated into Kingdom Inc's native Key Bindings options.
 - **Zero Save Footprint:** Visual-only runtime diagnostic; does not alter save files, recipe formulas, or vanilla mechanics.
 
 ## Hotkeys

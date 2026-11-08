@@ -1,4 +1,4 @@
-[b]Bottleneck Heatmap - 1.1.2[/b]
+[b]Bottleneck Heatmap - 1.2.0[/b]
 Real-time visual diagnostic heatmap for Kingdom Inc workshops. Color-codes all workshop nodes and connecting pipes with semi-transparent overlays to instantly identify running lines, starved machines, clogged bottlenecks, and full storage containers.
 
 [b]Features[/b]
@@ -10,10 +10,16 @@ Real-time visual diagnostic heatmap for Kingdom Inc workshops. Color-codes all w
   - [b]🔴 Clogged (Crimson Coral):[/b] Downstream output buffer full, item rejected, or jammed pipe connections.
   - [b]🟣 Full Storage (Royal Purple):[/b] Storage containers (Stockpiles and global Armories) that have reached maximum capacity.
   - [b]⚪ Idle (Slate):[/b] Unconfigured recipes, dormant machines, or empty/dead pipe branches.
-[*]Instant Hotkey Toggle: Press [b]H[/b] (or customize to any key) at any time to toggle the heatmap on or off.
-[*]Foundation Integration:
-  - Adds a styled [b]Heatmap: ON / OFF[/b] toggle button directly onto the in-game [b]Mod Bar[/b], perfectly aligned with the top HUD without ellipsis or truncation.
-  - Full [b]Mod Config[/b] menu: customize your Toggle Hotkey, adjust color palettes for all 5 states, configure node and pipe opacities, tune pipe glow width, toggle idle elements, and configure notification toasts.
+[*]Instant Hotkey Toggle: Rebindable hotkey matching vanilla controls. Press [b]H[/b] (or customize to any key) at any time to toggle the heatmap on or off. Integrated into both Foundation Mod Config and Kingdom Inc's native Key Bindings menu.
+[*]Color Palette Generator:
+  - Pick any base color via interactive Hue and Saturation/Brightness surfaces, preset swatches, or hex entry.
+  - The mod automatically calculates and previews the 5 harmonious surrounding hues across all states (Running, Starved, Clogged, Full Storage, Idle).
+  - Open from Foundation Mod Config or by simply right-clicking the Mod Bar toggle button!
+[*]Foundation Mod Config Integration:
+  - Percent sliders for Node Overlay Opacity (10%–100%) and Pipe Overlay Opacity (20%–100%).
+  - Multiplier slider for Pipe Glow Width (1.0x–2.5x).
+  - Vanilla-style interactive hotkey rebinding button.
+  - Fine-grained color dropdowns and one-click Color Palette Generator.
 [*]Zero Save Footprint: Visual-only runtime diagnostic; does not alter save files, recipe formulas, or vanilla mechanics.
 [/list]
 
