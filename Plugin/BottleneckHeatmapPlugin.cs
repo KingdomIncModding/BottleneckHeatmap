@@ -16,7 +16,7 @@ namespace KingdomBottleneckHeatmap
     public sealed class BottleneckHeatmapPlugin : BaseUnityPlugin
     {
         public const string Id = "urakka.kingdominc.bottleneckheatmap";
-        public const string Version = "1.2.5";
+        public const string Version = "1.2.6";
 
         public static BottleneckHeatmapPlugin Instance { get; private set; }
         public BepInEx.Logging.ManualLogSource Log => Logger;

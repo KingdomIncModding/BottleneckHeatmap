@@ -1,3 +1,8 @@
+Version 1.2.6:
+- Fixed "Pick Color" Button Width & Margins: Widened button to 25% of the row with generous internal horizontal margins so the "Pick Color" text has ample breathing room and never touches or clips into the pointed gold button frame.
+- Guaranteed Single-Line State Labels: Enforced TextWrappingModes.NoWrap with smooth font auto-sizing across all status rows, ensuring labels like "Full Storage Color (Containers)" and "Running Color (Active)" never wrap onto multiple lines.
+- Crisp Variation Swatch Borders: Refined swatch rendering with clean dark bronze borders when idle and bright gold borders when selected, eliminating sprite corner overlap.
+
 Version 1.2.5:
 - Individual State Enable/Disable Checkboxes: Added native gold-bordered checkboxes beside each state (Running, Starved, Clogged, Full Storage, Idle) in Foundation ModConfig.
 - Disabled States Fall Back to Running Color: When a state is unchecked/disabled, its nodes and pipes automatically render in the active Running color (or transparent if Running is disabled), allowing players to selectively filter out specific statuses.

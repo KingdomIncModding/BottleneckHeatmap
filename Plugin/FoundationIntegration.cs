@@ -510,7 +510,7 @@ namespace KingdomBottleneckHeatmap
             tRt.anchorMax = new Vector2(0f, 0.5f);
             tRt.pivot = new Vector2(0f, 0.5f);
             tRt.anchoredPosition = new Vector2(6f, 0f);
-            tRt.sizeDelta = new Vector2(24f, 24f);
+            tRt.sizeDelta = new Vector2(22f, 22f);
 
             toggle.onValueChanged = new Toggle.ToggleEvent();
             toggle.SetIsOnWithoutNotify(isEnabled);
@@ -521,15 +521,15 @@ namespace KingdomBottleneckHeatmap
             });
             UnityEngine.Object.Destroy(dummyToggleRow);
 
-            // 2. Left Swatch Border (22x22)
+            // 2. Left Swatch Border (20x20)
             var swatchBorderObj = new GameObject("SwatchBorder", typeof(RectTransform), typeof(Image));
             swatchBorderObj.transform.SetParent(row.transform, false);
             var sbRt = (RectTransform)swatchBorderObj.transform;
             sbRt.anchorMin = new Vector2(0f, 0.5f);
             sbRt.anchorMax = new Vector2(0f, 0.5f);
             sbRt.pivot = new Vector2(0f, 0.5f);
-            sbRt.anchoredPosition = new Vector2(36f, 0f);
-            sbRt.sizeDelta = new Vector2(22f, 22f);
+            sbRt.anchoredPosition = new Vector2(32f, 0f);
+            sbRt.sizeDelta = new Vector2(20f, 20f);
             var sbImg = swatchBorderObj.GetComponent<Image>();
             sbImg.color = new Color(0.36f, 0.32f, 0.24f, 1f);
 
@@ -544,13 +544,13 @@ namespace KingdomBottleneckHeatmap
             _leftSwatchImage = swatchObj.GetComponent<Image>();
             _leftSwatchImage.color = curColor;
 
-            // 3. Row Label
+            // 3. Row Label (Single line, strictly no wrap)
             var labelObj = new GameObject("RowLabel", typeof(RectTransform), typeof(TextMeshProUGUI));
             labelObj.transform.SetParent(row.transform, false);
             var lRt = (RectTransform)labelObj.transform;
             lRt.anchorMin = new Vector2(0f, 0f);
             lRt.anchorMax = new Vector2(0.40f, 1f);
-            lRt.offsetMin = new Vector2(64f, 0f);
+            lRt.offsetMin = new Vector2(56f, 0f);
             lRt.offsetMax = new Vector2(-4f, 0f);
             var tmp = labelObj.GetComponent<TextMeshProUGUI>();
             if (VanillaTheme.Font != null)
@@ -558,30 +558,40 @@ namespace KingdomBottleneckHeatmap
                 tmp.font = VanillaTheme.Font;
                 tmp.fontSharedMaterial = VanillaTheme.FontMaterial;
             }
-            tmp.fontSize = 14f;
-            tmp.fontSizeMin = 10f;
+            tmp.fontSize = 13.5f;
+            tmp.fontSizeMin = 9f;
             tmp.fontSizeMax = 15f;
             tmp.enableAutoSizing = true;
+            tmp.textWrappingMode = TextWrappingModes.NoWrap;
+            tmp.overflowMode = TextOverflowModes.Ellipsis;
             tmp.alignment = TextAlignmentOptions.MidlineLeft;
             tmp.raycastTarget = false;
             tmp.text = Label ?? "";
 
-            // 3. "Pick Color" Button cloned from vanilla
+            // 4. "Pick Color" Button cloned from vanilla (Widened with horizontal margins for text)
             var dummyBtnRow = context.Templates.CreateButtonRow(context.Container, "", "Pick Color", null, out var button, out var btnText);
 
             var btnObj = button.gameObject;
             btnObj.transform.SetParent(row.transform, false);
             var bRt = (RectTransform)btnObj.transform;
-            bRt.anchorMin = new Vector2(0.40f, 0.10f);
-            bRt.anchorMax = new Vector2(0.57f, 0.90f);
+            bRt.anchorMin = new Vector2(0.41f, 0.10f);
+            bRt.anchorMax = new Vector2(0.66f, 0.90f);
             bRt.offsetMin = Vector2.zero;
             bRt.offsetMax = Vector2.zero;
             if (btnText != null)
             {
                 btnText.text = "Pick Color";
-                btnText.fontSizeMin = 10f;
+                btnText.alignment = TextAlignmentOptions.Center;
+                btnText.textWrappingMode = TextWrappingModes.NoWrap;
+                btnText.overflowMode = TextOverflowModes.Ellipsis;
+                btnText.fontSize = 13f;
+                btnText.fontSizeMin = 8f;
                 btnText.fontSizeMax = 14f;
                 btnText.enableAutoSizing = true;
+                btnText.rectTransform.anchorMin = Vector2.zero;
+                btnText.rectTransform.anchorMax = Vector2.one;
+                btnText.rectTransform.offsetMin = new Vector2(10f, 0f);
+                btnText.rectTransform.offsetMax = new Vector2(-10f, 0f);
             }
 
             // Explicitly rebind onClick to guarantee it opens ColorPalettePopup
@@ -595,21 +605,21 @@ namespace KingdomBottleneckHeatmap
 
             UnityEngine.Object.Destroy(dummyBtnRow);
 
-            // 4. Subtle Vertical Divider "|"
+            // 5. Subtle Vertical Divider "|"
             var divObj = new GameObject("Divider", typeof(RectTransform), typeof(Image));
             divObj.transform.SetParent(row.transform, false);
             var divRt = (RectTransform)divObj.transform;
-            divRt.anchorMin = new Vector2(0.585f, 0.14f);
-            divRt.anchorMax = new Vector2(0.585f, 0.86f);
+            divRt.anchorMin = new Vector2(0.68f, 0.14f);
+            divRt.anchorMax = new Vector2(0.68f, 0.86f);
             divRt.sizeDelta = new Vector2(1.5f, 0f);
             var divImg = divObj.GetComponent<Image>();
             divImg.color = new Color(0.42f, 0.36f, 0.28f, 0.85f);
 
-            // 5. 5 Variation Swatches Container with HorizontalLayoutGroup
+            // 6. 5 Variation Swatches Container with HorizontalLayoutGroup
             var swatchesContainer = new GameObject("SwatchesContainer", typeof(RectTransform), typeof(HorizontalLayoutGroup));
             swatchesContainer.transform.SetParent(row.transform, false);
             var scRt = (RectTransform)swatchesContainer.transform;
-            scRt.anchorMin = new Vector2(0.60f, 0.12f);
+            scRt.anchorMin = new Vector2(0.70f, 0.12f);
             scRt.anchorMax = new Vector2(0.99f, 0.88f);
             scRt.offsetMin = Vector2.zero;
             scRt.offsetMax = Vector2.zero;
@@ -629,12 +639,7 @@ namespace KingdomBottleneckHeatmap
                 sBtnObj.transform.SetParent(swatchesContainer.transform, false);
 
                 var borderImg = sBtnObj.GetComponent<Image>();
-                if (VanillaTheme.ButtonSprite != null)
-                {
-                    borderImg.sprite = VanillaTheme.ButtonSprite;
-                    borderImg.type = Image.Type.Sliced;
-                }
-                borderImg.color = new Color(0.35f, 0.30f, 0.24f, 0.9f);
+                borderImg.color = new Color(0.28f, 0.24f, 0.18f, 0.9f);
                 _swatchBorders[i] = borderImg;
 
                 var fillObj = new GameObject("Fill", typeof(RectTransform), typeof(Image));
