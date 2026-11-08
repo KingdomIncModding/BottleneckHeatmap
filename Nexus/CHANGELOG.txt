@@ -1,0 +1,6 @@
+Initial release 1.0.0.
+- Real-time transparent visual diagnostic overlays for workshop nodes and pipes.
+- Running (green), Starved (amber), Clogged (red), and Idle (slate) state detection.
+- Aligned Heatmap: ON / OFF toggle button on Foundation Mod Bar.
+- Instant hotkey toggle (H by default, configurable).
+- Foundation Mod Config support for opacity and glow width customization.

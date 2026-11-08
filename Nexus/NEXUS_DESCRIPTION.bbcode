@@ -1,0 +1,45 @@
+[b]Bottleneck Heatmap - 1.0.0[/b]
+Real-time visual diagnostic heatmap for Kingdom Inc workshops. Color-codes all workshop nodes and connecting pipes with semi-transparent overlays to instantly identify running lines, starved machines, and clogged bottlenecks.
+
+[b]Features[/b]
+[list]
+[*]Transparent Overlays: Preserves full readability of node icons, recipe cards, progress bars, ports, and pipe routes without visual occlusion.
+[*]Node & Pipe State Evaluation:
+  - [b]🟢 Running (Mint Green):[/b] Actively processing recipes, producing resources, or transferring items through pipes.
+  - [b]🟡 Starved (Golden Amber):[/b] Missing required recipe reagents, unfulfilled resource quotas, or pipes waiting for items from upstream.
+  - [b]🔴 Clogged (Crimson Coral):[/b] Downstream output buffer full, item rejected, or jammed pipe connections.
+  - [b]⚪ Idle (Slate):[/b] Unconfigured recipes, dormant machines, or empty/dead pipe branches.
+[*]Instant Hotkey Toggle: Press [b]H[/b] (configurable) at any time to toggle the heatmap on or off.
+[*]Foundation Integration:
+  - Adds a styled [b]Heatmap: ON / OFF[/b] toggle button directly onto the in-game [b]Mod Bar[/b], perfectly aligned with the top HUD.
+  - Adds full settings under [b]Mod Config[/b]: adjust node overlay opacity, pipe glow opacity, pipe line width multiplier, toggle idle element visibility, and configure notifications.
+[*]Zero Save Footprint: Visual-only runtime diagnostic; does not alter save files, recipe formulas, or vanilla mechanics.
+[/list]
+
+[b]Requirements[/b]
+Kingdom Inc for Windows x64 (Mono).
+BepInEx 5 (5.4.21 or later, Windows x64 Mono):
+https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.6
+Foundation (0.5.0 or later, recommended for Mod Bar and Mod Config):
+https://www.nexusmods.com/kingdominc/mods/18
+
+[b]Installation[/b]
+1. Install BepInEx 5 (and optionally Foundation).
+2. Close Kingdom Inc if it is running.
+3. Extract the release ZIP into your game directory so [i]BottleneckHeatmap.dll[/i] is located at [i]BepInEx/plugins/BottleneckHeatmap/BottleneckHeatmap.dll[/i].
+4. Launch Kingdom Inc and open any workshop flow diagram. Press [b]H[/b] or click the [b]Heatmap[/b] button on the Mod Bar to inspect your factory!
+
+[b]Hotkeys[/b]
+[list]
+[*][b]H[/b] — Toggle Bottleneck Heatmap overlay.
+[/list]
+
+[b]Compatibility and known issues[/b]
+Client-side visual diagnostic tool. Does not modify player save data or game logic. Safe to install or remove at any time without affecting existing saves. Tested on Windows 10/11 x64.
+
+[b]Removal[/b]
+Close Kingdom Inc and delete the [i]BepInEx/plugins/BottleneckHeatmap[/i] folder.
+
+[b]Credits and permissions[/b]
+Author: Urakka.
+Source code: https://github.com/urakkaamyx/KingdomInc_BottleneckHeatmap
