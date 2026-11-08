@@ -1,1 +1,2 @@
 Real-time visual diagnostic heatmap color-coding Kingdom Inc workshop nodes and pipes by bottleneck status with aligned Mod Bar toggle button and hotkey control.
+

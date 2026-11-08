@@ -187,7 +187,7 @@ namespace KingdomBottleneckHeatmap
         readonly BottleneckHeatmapPlugin _plugin;
 
         public HeatmapBarElement(BottleneckHeatmapPlugin plugin)
-            : base(BottleneckHeatmapPlugin.Id, "heatmap_toggle", 140, 20, ModBarAlignment.Right)
+            : base(BottleneckHeatmapPlugin.Id, "heatmap_toggle", 160, 20, ModBarAlignment.Right)
         {
             _plugin = plugin;
         }
@@ -213,6 +213,15 @@ namespace KingdomBottleneckHeatmap
             _button = context.CreateButton(GetLabel(), OnClick);
             _image = _button.GetComponent<Image>();
             _text = _button.GetComponentInChildren<TMP_Text>(true);
+            if (_text != null)
+            {
+                _text.enableAutoSizing = true;
+                _text.fontSizeMin = 13;
+                _text.fontSizeMax = 18;
+                _text.overflowMode = TextOverflowModes.Overflow;
+                _text.rectTransform.offsetMin = new Vector2(4, 2);
+                _text.rectTransform.offsetMax = new Vector2(-4, -2);
+            }
             Refresh();
         }
 

@@ -10,6 +10,8 @@ import time
 import urllib.error
 import urllib.request
 
+import xml.etree.ElementTree as ET
+
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "Nexus"
 RELEASES = ROOT / "Releases"
@@ -17,7 +19,7 @@ RECEIPT = OUT / "PUBLICATION.json"
 
 PAGE = 21
 MOD_ID = "46785078755349"
-VERSION = "1.0.0"
+VERSION = ET.parse(ROOT / "BottleneckHeatmap.csproj").getroot().findtext("PropertyGroup/Version")
 ARCHIVE_NAME = f"KingdomInc-BottleneckHeatmap-{VERSION}.zip"
 ARCHIVE_PATH = RELEASES / ARCHIVE_NAME
 
@@ -101,27 +103,95 @@ def main():
         print("Description and summary are already current.")
         record["detailsUpdated"] = False
 
-    # 2. Check existing files
+    # 2. Check existing files and versions
     print("Checking existing files on mod...")
     existing = api(f"/mods/{p['id']}/files")
     files = existing.get("data", {}).get("mod_files", [])
 
+    assert ARCHIVE_PATH.exists(), f"Archive not found: {ARCHIVE_PATH}"
+    payload = ARCHIVE_PATH.read_bytes()
+    sha256 = hashlib.sha256(payload).hexdigest()
+    md5 = hashlib.md5(payload).digest()
+
+    record["sha256"] = sha256
+    record["bytes"] = len(payload)
+
+    file_desc = (
+        "Real-time visual diagnostic heatmap for Kingdom Inc workshops.\n"
+        "Color-codes nodes and pipes by Running (green), Starved (amber), Clogged (red), and Idle (slate).\n"
+        "Adds an aligned Heatmap toggle button directly to the Foundation Mod Bar, plus instant hotkey 'H' toggle.\n"
+        "Requires BepInEx 5 (Windows x64 Mono) and optionally Foundation 0.5.0+."
+    )
+
     if files:
-        print(f"Found {len(files)} existing file(s) on mod page:")
-        for f in files:
-            print(f"  - {f.get('name')} (id: {f.get('id')})")
+        print(f"Found {len(files)} existing file chain(s) on mod page.")
         chain_id = files[0]["id"]
         record["fileChainId"] = chain_id
+
+        # Check existing versions on chain
+        versions = api(f"/mod-files/{chain_id}/versions")["data"]["versions"]
+        matching = [v for v in versions if v["version"] == VERSION]
+
+        if not matching:
+            previous = next((v for v in versions if v["category"] == "main"), versions[0])
+            print(f"Uploading version {VERSION} to existing chain {chain_id} (previous: {previous['version']})...")
+
+            upload_ticket = api(
+                "/uploads",
+                "POST",
+                {"filename": ARCHIVE_NAME, "size_bytes": len(payload), "md5": md5.hex()},
+            )["data"]
+            upload_id = upload_ticket["id"]
+            record["uploadId"] = upload_id
+
+            print("Uploading binary to presigned storage URL...")
+            put_req = urllib.request.Request(
+                upload_ticket["presigned_url"],
+                method="PUT",
+                data=payload,
+                headers={
+                    "Content-Type": "application/octet-stream",
+                    "Content-Disposition": f'attachment; filename="{ARCHIVE_NAME}"',
+                    "Content-MD5": base64.b64encode(md5).decode(),
+                },
+            )
+            with urllib.request.urlopen(put_req, timeout=90) as put_res:
+                assert put_res.status in (200, 201, 204)
+            print("Binary upload complete. Finalising...")
+            api(f"/uploads/{upload_id}/finalise", "POST")
+
+            for attempt in range(30):
+                state = api(f"/uploads/{upload_id}")["data"]["state"]
+                print(f"  Upload state: {state} (attempt {attempt + 1})")
+                record["uploadState"] = state
+                if state == "available":
+                    break
+                if state in ("failed", "rejected", "error"):
+                    raise RuntimeError(f"Upload processing failed: {state}")
+                time.sleep(2)
+            else:
+                raise RuntimeError("Upload processing timed out.")
+
+            print("Creating new version on file chain...")
+            create_res = api(
+                f"/mod-files/{chain_id}/versions",
+                "POST",
+                {
+                    "upload_id": upload_id,
+                    "name": f"Bottleneck Heatmap {VERSION}",
+                    "version": VERSION,
+                    "file_category": "main",
+                    "description": file_desc,
+                    "update_mod_version": True,
+                    "archive_existing_file": True,
+                    "previous_version_id": previous["id"],
+                    "show_requirements_pop_up": True,
+                },
+            )
+            record["createResponse"] = create_res
+            print(f"Version {VERSION} created successfully!")
     else:
-        # 3. Upload release archive
-        assert ARCHIVE_PATH.exists(), f"Archive not found: {ARCHIVE_PATH}"
-        payload = ARCHIVE_PATH.read_bytes()
-        sha256 = hashlib.sha256(payload).hexdigest()
-        md5 = hashlib.md5(payload).digest()
-
-        record["sha256"] = sha256
-        record["bytes"] = len(payload)
-
+        # Upload entirely new file chain
         print(f"Requesting upload ticket for {ARCHIVE_NAME} ({len(payload)} bytes)...")
         upload_ticket = api(
             "/uploads",
@@ -134,12 +204,11 @@ def main():
         )["data"]
 
         upload_id = upload_ticket["id"]
-        presigned_url = upload_ticket["presigned_url"]
         record["uploadId"] = upload_id
 
         print("Uploading binary to presigned storage URL...")
         put_req = urllib.request.Request(
-            presigned_url,
+            upload_ticket["presigned_url"],
             method="PUT",
             data=payload,
             headers={
@@ -150,12 +219,9 @@ def main():
         )
         with urllib.request.urlopen(put_req, timeout=90) as put_res:
             assert put_res.status in (200, 201, 204)
-        print("Binary upload complete.")
-
-        print("Finalising upload...")
+        print("Binary upload complete. Finalising...")
         api(f"/uploads/{upload_id}/finalise", "POST")
 
-        print("Waiting for upload processing...")
         for attempt in range(25):
             state = api(f"/uploads/{upload_id}")["data"]["state"]
             print(f"  Upload state: {state} (poll {attempt + 1})")
@@ -167,13 +233,6 @@ def main():
             time.sleep(2)
         else:
             raise RuntimeError("Upload processing timed out.")
-
-        file_desc = (
-            "Real-time visual diagnostic heatmap for Kingdom Inc workshops.\n"
-            "Color-codes nodes and pipes by Running (green), Starved (amber), Clogged (red), and Idle (slate).\n"
-            "Adds an aligned Heatmap toggle button directly to the Foundation Mod Bar, plus instant hotkey 'H' toggle.\n"
-            "Requires BepInEx 5 (Windows x64 Mono) and optionally Foundation 0.5.0+."
-        )
 
         print("Creating new mod file...")
         create_res = api(
@@ -195,7 +254,6 @@ def main():
         record["createResponse"] = create_res
         print("Mod file successfully created!")
 
-        # Refresh files list
         existing = api(f"/mods/{p['id']}/files")
         files = existing.get("data", {}).get("mod_files", [])
         assert files, "No files found after creation!"
@@ -264,3 +322,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
