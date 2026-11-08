@@ -1,3 +1,8 @@
+Version 1.2.4:
+- Fixed "Pick Color" Popup Initialization: Replaced prefab instantiation with pure native UI element construction styled with vanilla 9-sliced sprites and pixel typography, and gave the Color Palette Generator its own persistent ScreenSpaceOverlay canvas to ensure the window opens reliably on top of all game and ModConfig menus.
+- Single-Line State Colors & Swatches: Each status row in Foundation ModConfig features a live active color swatch, state label, "Pick Color" button, divider, and 5 horizontal variation hue buttons on one unified line.
+- Mod Bar Hover Legend Tooltip: Hovering over the Heatmap button on the Foundation Mod Bar displays an interactive color legend with live swatch previews and status explanations.
+
 Version 1.2.3:
 - Authentic Game UI Theming: Redesigned the Color Palette Generator popup using vanilla Kingdom Inc modal frame sprites, 9-sliced gold-inlaid borders, native button prefabs, retro pixel fantasy typography, and page-turn sound effects.
 - Fixed Dropdown Text Overlapping: Eliminated multi-line text wrapping and vertical overflow in ModConfig variation dropdowns with single-line auto-sizing and wider anchor allocation.

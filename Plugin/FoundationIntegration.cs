@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using Assets.Behaviour.UI;
+using Assets.Source.Util;
 using KingdomFoundation.Api;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace KingdomBottleneckHeatmap
@@ -234,7 +237,7 @@ namespace KingdomBottleneckHeatmap
                 formatValue: val => $"{val:0.0}x"
             );
 
-            // Section 3: State Colors & Variations
+            // Section 3: State Colors & Variations (Matches User Mockup)
             section.AddText("State Colors & Variations", isHeader: true);
 
             _runningRow = new ModConfigStateColorRow(
@@ -406,6 +409,11 @@ namespace KingdomBottleneckHeatmap
         }
     }
 
+    /// <summary>
+    /// Custom row element displaying:
+    /// [Active Swatch] Label    [Pick Color Button]  |  [Var1][Var2][Var3][Var4][Var5]
+    /// Completely matches user mockup image on a single unified line!
+    /// </summary>
     internal sealed class ModConfigStateColorRow : IModConfigElement
     {
         public string Id { get; }
@@ -416,8 +424,9 @@ namespace KingdomBottleneckHeatmap
         public Action<string> HexSetter { get; }
 
         (string Label, string Hex)[] _variations;
-        Image _swatchImage;
-        TMP_Dropdown _activeDropdown;
+        Image _leftSwatchImage;
+        readonly Image[] _swatchBorders = new Image[5];
+        readonly Image[] _swatchFills = new Image[5];
 
         public ModConfigStateColorRow(
             BottleneckState state,
@@ -437,13 +446,15 @@ namespace KingdomBottleneckHeatmap
 
         public GameObject CreateView(IModConfigContext context)
         {
-            var row = context.Templates.CreateEmptyRow(context.Container, 48f);
+            VanillaTheme.Ensure();
+
+            var row = context.Templates.CreateEmptyRow(context.Container, 46f);
             row.name = $"StateColorRow_{State}";
 
             string currentHex = HexGetter != null ? HexGetter() : "#FFFFFF";
             Color curColor = ColorUtility.TryParseHtmlString(currentHex, out var c) ? c : Color.white;
 
-            // 1. Swatch Border
+            // 1. Left Swatch Border (24x24)
             var swatchBorderObj = new GameObject("SwatchBorder", typeof(RectTransform), typeof(Image));
             swatchBorderObj.transform.SetParent(row.transform, false);
             var sbRt = (RectTransform)swatchBorderObj.transform;
@@ -455,7 +466,7 @@ namespace KingdomBottleneckHeatmap
             var sbImg = swatchBorderObj.GetComponent<Image>();
             sbImg.color = new Color(0.36f, 0.32f, 0.24f, 1f);
 
-            // 2. Swatch Image
+            // Left Swatch Image
             var swatchObj = new GameObject("Swatch", typeof(RectTransform), typeof(Image));
             swatchObj.transform.SetParent(swatchBorderObj.transform, false);
             var sRt = (RectTransform)swatchObj.transform;
@@ -463,123 +474,424 @@ namespace KingdomBottleneckHeatmap
             sRt.anchorMax = Vector2.one;
             sRt.offsetMin = new Vector2(2f, 2f);
             sRt.offsetMax = new Vector2(-2f, -2f);
-            _swatchImage = swatchObj.GetComponent<Image>();
-            _swatchImage.color = curColor;
+            _leftSwatchImage = swatchObj.GetComponent<Image>();
+            _leftSwatchImage.color = curColor;
 
-            // 3. Row Label
+            // 2. Row Label
             var labelObj = new GameObject("RowLabel", typeof(RectTransform), typeof(TextMeshProUGUI));
             labelObj.transform.SetParent(row.transform, false);
             var lRt = (RectTransform)labelObj.transform;
             lRt.anchorMin = new Vector2(0f, 0f);
-            lRt.anchorMax = new Vector2(0.44f, 1f);
+            lRt.anchorMax = new Vector2(0.40f, 1f);
             lRt.offsetMin = new Vector2(36f, 0f);
             lRt.offsetMax = new Vector2(-4f, 0f);
             var tmp = labelObj.GetComponent<TextMeshProUGUI>();
-            tmp.fontSize = 15;
-            tmp.fontSizeMin = 11;
-            tmp.fontSizeMax = 16;
+            if (VanillaTheme.Font != null)
+            {
+                tmp.font = VanillaTheme.Font;
+                tmp.fontSharedMaterial = VanillaTheme.FontMaterial;
+            }
+            tmp.fontSize = 15f;
+            tmp.fontSizeMin = 10f;
+            tmp.fontSizeMax = 16f;
             tmp.enableAutoSizing = true;
             tmp.alignment = TextAlignmentOptions.MidlineLeft;
             tmp.raycastTarget = false;
             tmp.text = Label ?? "";
 
-            // 4. "Pick Color" Button cloned from vanilla
-            var dummyBtnRow = context.Templates.CreateButtonRow(context.Container, "", "Pick Color", () =>
-            {
-                ColorPalettePopup.Open(State);
-            }, out var button, out var btnText);
+            // 3. "Pick Color" Button cloned from vanilla
+            var dummyBtnRow = context.Templates.CreateButtonRow(context.Container, "", "Pick Color", null, out var button, out var btnText);
 
             var btnObj = button.gameObject;
             btnObj.transform.SetParent(row.transform, false);
             var bRt = (RectTransform)btnObj.transform;
-            bRt.anchorMin = new Vector2(0.42f, 0.08f);
-            bRt.anchorMax = new Vector2(0.60f, 0.92f);
+            bRt.anchorMin = new Vector2(0.40f, 0.10f);
+            bRt.anchorMax = new Vector2(0.57f, 0.90f);
             bRt.offsetMin = Vector2.zero;
             bRt.offsetMax = Vector2.zero;
             if (btnText != null)
             {
                 btnText.text = "Pick Color";
-                btnText.fontSizeMin = 10;
-                btnText.fontSizeMax = 14;
+                btnText.fontSizeMin = 10f;
+                btnText.fontSizeMax = 14f;
                 btnText.enableAutoSizing = true;
             }
+
+            // Explicitly rebind onClick to guarantee it opens ColorPalettePopup
+            var targetState = State;
+            button.onClick = new Button.ButtonClickedEvent();
+            button.onClick.AddListener(() =>
+            {
+                UISounds.TurnPage();
+                ColorPalettePopup.Open(targetState);
+            });
+
             UnityEngine.Object.Destroy(dummyBtnRow);
 
-            // 5. Dropdown cloned from vanilla
-            string[] labels = FoundationIntegration.GetLabels(_variations);
-            int selectedIndex = FoundationIntegration.FindColorIndex(_variations, currentHex);
+            // 4. Subtle Vertical Divider "|"
+            var divObj = new GameObject("Divider", typeof(RectTransform), typeof(Image));
+            divObj.transform.SetParent(row.transform, false);
+            var divRt = (RectTransform)divObj.transform;
+            divRt.anchorMin = new Vector2(0.585f, 0.14f);
+            divRt.anchorMax = new Vector2(0.585f, 0.86f);
+            divRt.sizeDelta = new Vector2(1.5f, 0f);
+            var divImg = divObj.GetComponent<Image>();
+            divImg.color = new Color(0.42f, 0.36f, 0.28f, 0.85f);
 
-            var dummyDropRow = context.Templates.CreateDropdownRow(context.Container, "", labels, selectedIndex, idx =>
+            // 5. 5 Variation Swatches Container with HorizontalLayoutGroup
+            var swatchesContainer = new GameObject("SwatchesContainer", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            swatchesContainer.transform.SetParent(row.transform, false);
+            var scRt = (RectTransform)swatchesContainer.transform;
+            scRt.anchorMin = new Vector2(0.60f, 0.12f);
+            scRt.anchorMax = new Vector2(0.99f, 0.88f);
+            scRt.offsetMin = Vector2.zero;
+            scRt.offsetMax = Vector2.zero;
+
+            var hlg = swatchesContainer.GetComponent<HorizontalLayoutGroup>();
+            hlg.spacing = 4f;
+            hlg.childAlignment = TextAnchor.MiddleCenter;
+            hlg.childControlWidth = true;
+            hlg.childControlHeight = true;
+            hlg.childForceExpandWidth = true;
+            hlg.childForceExpandHeight = true;
+
+            for (int i = 0; i < 5; i++)
             {
-                if (_variations != null && idx >= 0 && idx < _variations.Length)
+                int varIdx = i;
+                var sBtnObj = new GameObject($"VarSwatch_{i}", typeof(RectTransform), typeof(Image), typeof(Button));
+                sBtnObj.transform.SetParent(swatchesContainer.transform, false);
+
+                var borderImg = sBtnObj.GetComponent<Image>();
+                if (VanillaTheme.ButtonSprite != null)
                 {
-                    string chosenHex = _variations[idx].Hex;
-                    HexSetter?.Invoke(chosenHex);
-                    if (ColorUtility.TryParseHtmlString(chosenHex, out var col) && _swatchImage != null)
-                    {
-                        _swatchImage.color = col;
-                    }
+                    borderImg.sprite = VanillaTheme.ButtonSprite;
+                    borderImg.type = Image.Type.Sliced;
                 }
-            }, out _activeDropdown);
+                borderImg.color = new Color(0.35f, 0.30f, 0.24f, 0.9f);
+                _swatchBorders[i] = borderImg;
 
-            var dropObj = _activeDropdown.gameObject;
-            dropObj.transform.SetParent(row.transform, false);
-            var dRt = (RectTransform)dropObj.transform;
-            dRt.anchorMin = new Vector2(0.61f, 0.08f);
-            dRt.anchorMax = new Vector2(0.99f, 0.92f);
-            dRt.offsetMin = Vector2.zero;
-            dRt.offsetMax = Vector2.zero;
-            if (_activeDropdown.captionText != null)
-            {
-                _activeDropdown.captionText.textWrappingMode = TextWrappingModes.NoWrap;
-                _activeDropdown.captionText.overflowMode = TextOverflowModes.Ellipsis;
-                _activeDropdown.captionText.enableAutoSizing = true;
-                _activeDropdown.captionText.fontSizeMin = 8f;
-                _activeDropdown.captionText.fontSizeMax = 13f;
-                _activeDropdown.captionText.alignment = TextAlignmentOptions.MidlineLeft;
+                var fillObj = new GameObject("Fill", typeof(RectTransform), typeof(Image));
+                fillObj.transform.SetParent(sBtnObj.transform, false);
+                var fRt = (RectTransform)fillObj.transform;
+                fRt.anchorMin = Vector2.zero;
+                fRt.anchorMax = Vector2.one;
+                fRt.offsetMin = new Vector2(2f, 2f);
+                fRt.offsetMax = new Vector2(-2f, -2f);
+                var fillImg = fillObj.GetComponent<Image>();
+                fillImg.raycastTarget = false;
+                _swatchFills[i] = fillImg;
 
-                var cRt = _activeDropdown.captionText.rectTransform;
-                cRt.anchorMin = Vector2.zero;
-                cRt.anchorMax = Vector2.one;
-                cRt.offsetMin = new Vector2(8f, 0f);
-                cRt.offsetMax = new Vector2(-28f, 0f);
+                if (_variations != null && i < _variations.Length)
+                {
+                    ColorUtility.TryParseHtmlString(_variations[i].Hex, out var varCol);
+                    fillImg.color = varCol;
+                }
+
+                var btn = sBtnObj.GetComponent<Button>();
+                btn.onClick.AddListener(() =>
+                {
+                    UISounds.TurnPage();
+                    SelectVariation(varIdx);
+                });
             }
 
-            if (_activeDropdown.template != null)
-            {
-                foreach (var t in _activeDropdown.template.GetComponentsInChildren<TMP_Text>(true))
-                {
-                    t.textWrappingMode = TextWrappingModes.NoWrap;
-                    t.overflowMode = TextOverflowModes.Ellipsis;
-                }
-            }
-            UnityEngine.Object.Destroy(dummyDropRow);
+            HighlightSelected(currentHex);
 
             row.SetActive(IsVisible);
             return row;
         }
 
+        void SelectVariation(int index)
+        {
+            if (_variations == null || index < 0 || index >= _variations.Length) return;
+            string hex = _variations[index].Hex;
+            HexSetter?.Invoke(hex);
+            if (ColorUtility.TryParseHtmlString(hex, out var col) && _leftSwatchImage != null)
+            {
+                _leftSwatchImage.color = col;
+            }
+            HighlightSelected(hex);
+        }
+
+        void HighlightSelected(string currentHex)
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                if (_swatchBorders[i] == null) continue;
+                bool isSelected = _variations != null && i < _variations.Length &&
+                    string.Equals(_variations[i].Hex, currentHex, StringComparison.OrdinalIgnoreCase);
+
+                if (isSelected)
+                {
+                    _swatchBorders[i].color = new Color(1f, 0.85f, 0.18f, 1f); // Bright gold border!
+                }
+                else
+                {
+                    _swatchBorders[i].color = new Color(0.35f, 0.30f, 0.24f, 0.9f); // Dark bronze border
+                }
+            }
+        }
+
         public void UpdateVariations((string Label, string Hex)[] newVariations, string currentHex)
         {
             _variations = newVariations;
-            if (ColorUtility.TryParseHtmlString(currentHex, out var col) && _swatchImage != null)
+            if (ColorUtility.TryParseHtmlString(currentHex, out var col) && _leftSwatchImage != null)
             {
-                _swatchImage.color = col;
+                _leftSwatchImage.color = col;
             }
 
-            if (_activeDropdown != null && newVariations != null)
+            if (newVariations != null)
             {
-                string[] labels = FoundationIntegration.GetLabels(newVariations);
-                int idx = FoundationIntegration.FindColorIndex(newVariations, currentHex);
-                _activeDropdown.ClearOptions();
-                _activeDropdown.AddOptions(new List<string>(labels));
-                _activeDropdown.SetValueWithoutNotify(idx);
-                _activeDropdown.RefreshShownValue();
+                for (int i = 0; i < 5 && i < newVariations.Length; i++)
+                {
+                    if (_swatchFills[i] != null && ColorUtility.TryParseHtmlString(newVariations[i].Hex, out var vCol))
+                    {
+                        _swatchFills[i].color = vCol;
+                    }
+                }
             }
+
+            HighlightSelected(currentHex);
         }
 
         public void Commit() { }
         public void Cancel() { }
+    }
+
+    /// <summary>
+    /// Rich interactive hover legend tooltip displayed when hovering over the Heatmap button on the Mod Bar.
+    /// </summary>
+    internal sealed class HeatmapLegendTooltip : MonoBehaviour
+    {
+        static HeatmapLegendTooltip _instance;
+
+        Image _swatchRunning;
+        Image _swatchStarved;
+        Image _swatchClogged;
+        Image _swatchFullStorage;
+        Image _swatchIdle;
+
+        public static void Show(RectTransform anchor)
+        {
+            if (!anchor) return;
+            EnsureInstance(anchor);
+            if (!_instance) return;
+
+            _instance.UpdateColors();
+            _instance.PositionAt(anchor);
+            _instance.gameObject.SetActive(true);
+            _instance.transform.SetAsLastSibling();
+        }
+
+        public static void Hide()
+        {
+            if (_instance)
+            {
+                _instance.gameObject.SetActive(false);
+            }
+        }
+
+        static void EnsureInstance(RectTransform anchor)
+        {
+            if (_instance) return;
+            var canvas = anchor.GetComponentInParent<Canvas>();
+            if (!canvas) canvas = UnityEngine.Object.FindAnyObjectByType<Canvas>();
+            if (!canvas) return;
+
+            var go = new GameObject("HeatmapLegendTooltip", typeof(RectTransform));
+            go.transform.SetParent(canvas.transform, false);
+            _instance = go.AddComponent<HeatmapLegendTooltip>();
+            _instance.BuildUI();
+        }
+
+        void BuildUI()
+        {
+            VanillaTheme.Ensure();
+
+            var rt = (RectTransform)transform;
+            rt.sizeDelta = new Vector2(330f, 218f);
+
+            var cg = gameObject.AddComponent<CanvasGroup>();
+            cg.blocksRaycasts = false;
+            cg.interactable = false;
+
+            var img = gameObject.AddComponent<Image>();
+            img.raycastTarget = false;
+            if (VanillaTheme.WindowSprite != null)
+            {
+                img.sprite = VanillaTheme.WindowSprite;
+                img.type = Image.Type.Sliced;
+                img.color = Color.white;
+            }
+            else
+            {
+                img.color = new Color(0.12f, 0.10f, 0.14f, 0.98f);
+            }
+
+            // Title
+            CreateText(transform, "Title", "Bottleneck Heatmap Legend", new Vector2(0f, -14f), new Vector2(330f, 20f), 14f, new Color(1f, 0.85f, 0.18f), FontStyles.Bold, TextAlignmentOptions.Center);
+
+            // Separator 1
+            CreateSeparator(transform, -36f);
+
+            // 5 Status Rows
+            float startY = -46f;
+            float rowHeight = 26f;
+
+            _swatchRunning = CreateLegendRow(transform, "Running", "Running", "Processing & transferring items", startY + 0 * -rowHeight);
+            _swatchStarved = CreateLegendRow(transform, "Starved", "Starved", "Waiting for input reagents", startY + 1 * -rowHeight);
+            _swatchClogged = CreateLegendRow(transform, "Clogged", "Clogged", "Output blocked / rejected", startY + 2 * -rowHeight);
+            _swatchFullStorage = CreateLegendRow(transform, "FullStorage", "Full Storage", "Stockpiles & Armories at cap", startY + 3 * -rowHeight);
+            _swatchIdle = CreateLegendRow(transform, "Idle", "Idle", "Dormant / unconfigured node", startY + 4 * -rowHeight);
+
+            // Separator 2
+            CreateSeparator(transform, -180f);
+
+            // Footer tip
+            CreateText(transform, "Tip", "Left-Click: Toggle  *  Right-Click: Colors", new Vector2(0f, -190f), new Vector2(330f, 18f), 11f, new Color(0.78f, 0.74f, 0.68f), FontStyles.Normal, TextAlignmentOptions.Center);
+
+            gameObject.SetActive(false);
+        }
+
+        Image CreateLegendRow(Transform parent, string name, string label, string desc, float y)
+        {
+            var row = new GameObject(name, typeof(RectTransform));
+            row.transform.SetParent(parent, false);
+            var rRt = (RectTransform)row.transform;
+            rRt.anchorMin = new Vector2(0f, 1f);
+            rRt.anchorMax = new Vector2(1f, 1f);
+            rRt.pivot = new Vector2(0f, 1f);
+            rRt.anchoredPosition = new Vector2(16f, y);
+            rRt.sizeDelta = new Vector2(-32f, 24f);
+
+            // Swatch Border
+            var sBorder = new GameObject("SwatchBorder", typeof(RectTransform), typeof(Image));
+            sBorder.transform.SetParent(row.transform, false);
+            var sbRt = (RectTransform)sBorder.transform;
+            sbRt.anchorMin = new Vector2(0f, 0.5f);
+            sbRt.anchorMax = new Vector2(0f, 0.5f);
+            sbRt.pivot = new Vector2(0f, 0.5f);
+            sbRt.anchoredPosition = Vector2.zero;
+            sbRt.sizeDelta = new Vector2(18f, 18f);
+            sBorder.GetComponent<Image>().color = new Color(0.35f, 0.30f, 0.24f, 1f);
+
+            // Swatch Fill
+            var sFill = new GameObject("SwatchFill", typeof(RectTransform), typeof(Image));
+            sFill.transform.SetParent(sBorder.transform, false);
+            var sfRt = (RectTransform)sFill.transform;
+            sfRt.anchorMin = Vector2.zero;
+            sfRt.anchorMax = Vector2.one;
+            sfRt.offsetMin = new Vector2(2f, 2f);
+            sfRt.offsetMax = new Vector2(-2f, -2f);
+            var swatchImg = sFill.GetComponent<Image>();
+
+            // Label
+            var lObj = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            lObj.transform.SetParent(row.transform, false);
+            var lRt = (RectTransform)lObj.transform;
+            lRt.anchorMin = new Vector2(0f, 0f);
+            lRt.anchorMax = new Vector2(0f, 1f);
+            lRt.pivot = new Vector2(0f, 0.5f);
+            lRt.anchoredPosition = new Vector2(24f, 0f);
+            lRt.sizeDelta = new Vector2(85f, 24f);
+            var lText = lObj.GetComponent<TextMeshProUGUI>();
+            if (VanillaTheme.Font != null) { lText.font = VanillaTheme.Font; lText.fontSharedMaterial = VanillaTheme.FontMaterial; }
+            lText.text = label;
+            lText.fontSize = 12f;
+            lText.fontStyle = FontStyles.Bold;
+            lText.color = Color.white;
+            lText.alignment = TextAlignmentOptions.MidlineLeft;
+
+            // Description
+            var dObj = new GameObject("Desc", typeof(RectTransform), typeof(TextMeshProUGUI));
+            dObj.transform.SetParent(row.transform, false);
+            var dRt = (RectTransform)dObj.transform;
+            dRt.anchorMin = new Vector2(0f, 0f);
+            dRt.anchorMax = new Vector2(1f, 1f);
+            dRt.pivot = new Vector2(0f, 0.5f);
+            dRt.offsetMin = new Vector2(112f, 0f);
+            dRt.offsetMax = Vector2.zero;
+            var dText = dObj.GetComponent<TextMeshProUGUI>();
+            if (VanillaTheme.Font != null) { dText.font = VanillaTheme.Font; dText.fontSharedMaterial = VanillaTheme.FontMaterial; }
+            dText.text = desc;
+            dText.fontSize = 10f;
+            dText.color = new Color(0.80f, 0.77f, 0.72f, 0.95f);
+            dText.alignment = TextAlignmentOptions.MidlineLeft;
+
+            return swatchImg;
+        }
+
+        void CreateSeparator(Transform parent, float y)
+        {
+            var sep = new GameObject("Sep", typeof(RectTransform), typeof(Image));
+            sep.transform.SetParent(parent, false);
+            var srt = (RectTransform)sep.transform;
+            srt.anchorMin = new Vector2(0f, 1f);
+            srt.anchorMax = new Vector2(1f, 1f);
+            srt.anchoredPosition = new Vector2(0f, y);
+            srt.sizeDelta = new Vector2(-28f, 1.5f);
+            sep.GetComponent<Image>().color = new Color(0.38f, 0.32f, 0.24f, 0.85f);
+        }
+
+        TMP_Text CreateText(Transform parent, string name, string text, Vector2 pos, Vector2 size, float fontSize, Color color, FontStyles style, TextAlignmentOptions align)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(TextMeshProUGUI));
+            go.transform.SetParent(parent, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = pos;
+            rt.sizeDelta = size;
+
+            var tmp = go.GetComponent<TextMeshProUGUI>();
+            if (VanillaTheme.Font != null)
+            {
+                tmp.font = VanillaTheme.Font;
+                tmp.fontSharedMaterial = VanillaTheme.FontMaterial;
+            }
+            tmp.text = text;
+            tmp.fontSize = fontSize;
+            tmp.color = color;
+            tmp.fontStyle = style;
+            tmp.alignment = align;
+            tmp.raycastTarget = false;
+            return tmp;
+        }
+
+        void UpdateColors()
+        {
+            if (_swatchRunning) _swatchRunning.color = HeatmapMaterials.RunningColor;
+            if (_swatchStarved) _swatchStarved.color = HeatmapMaterials.StarvedColor;
+            if (_swatchClogged) _swatchClogged.color = HeatmapMaterials.CloggedColor;
+            if (_swatchFullStorage) _swatchFullStorage.color = HeatmapMaterials.FullStorageColor;
+            if (_swatchIdle) _swatchIdle.color = HeatmapMaterials.IdleColor;
+        }
+
+        void PositionAt(RectTransform anchor)
+        {
+            var canvas = GetComponentInParent<Canvas>();
+            if (!canvas) return;
+
+            Vector3[] corners = new Vector3[4];
+            anchor.GetWorldCorners(corners);
+            Vector3 bottomCenter = (corners[0] + corners[3]) * 0.5f;
+            Vector3 topCenter = (corners[1] + corners[2]) * 0.5f;
+
+            bool inUpperHalf = bottomCenter.y > Screen.height * 0.5f;
+
+            var rt = (RectTransform)transform;
+            rt.pivot = inUpperHalf ? new Vector2(0.5f, 1f) : new Vector2(0.5f, 0f);
+            rt.position = inUpperHalf ? bottomCenter + new Vector3(0, -6f, 0) : topCenter + new Vector3(0, 6f, 0);
+
+            var canvasRt = (RectTransform)canvas.transform;
+            float halfWidth = rt.rect.width * 0.5f;
+            Vector3 local = rt.localPosition;
+            float minX = -canvasRt.rect.width * 0.5f + halfWidth + 10f;
+            float maxX = canvasRt.rect.width * 0.5f - halfWidth - 10f;
+            local.x = Mathf.Clamp(local.x, minX, maxX);
+            rt.localPosition = local;
+        }
     }
 
     internal sealed class HeatmapBarElement : ModBarElement
@@ -613,6 +925,8 @@ namespace KingdomBottleneckHeatmap
             _button = context.CreateButton(GetLabel(), OnClick);
             var clickHandler = _button.gameObject.AddComponent<HeatmapBarClickHandler>();
             clickHandler.OnRightClick = () => ColorPalettePopup.Open();
+            clickHandler.OnHoverEnter = () => HeatmapLegendTooltip.Show(_button.transform as RectTransform);
+            clickHandler.OnHoverExit = () => HeatmapLegendTooltip.Hide();
 
             _image = _button.GetComponent<Image>();
             _text = _button.GetComponentInChildren<TMP_Text>(true);
@@ -662,20 +976,39 @@ namespace KingdomBottleneckHeatmap
 
         public void Dispose()
         {
+            HeatmapLegendTooltip.Hide();
             FoundationIntegration.ClearActiveView(this);
         }
     }
 
-    internal sealed class HeatmapBarClickHandler : MonoBehaviour, UnityEngine.EventSystems.IPointerClickHandler
+    internal sealed class HeatmapBarClickHandler : MonoBehaviour,
+        IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
     {
         public Action OnRightClick;
+        public Action OnHoverEnter;
+        public Action OnHoverExit;
 
-        public void OnPointerClick(UnityEngine.EventSystems.PointerEventData eventData)
+        public void OnPointerClick(PointerEventData eventData)
         {
-            if (eventData.button == UnityEngine.EventSystems.PointerEventData.InputButton.Right)
+            if (eventData.button == PointerEventData.InputButton.Right)
             {
                 OnRightClick?.Invoke();
             }
+        }
+
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            OnHoverEnter?.Invoke();
+        }
+
+        public void OnPointerExit(PointerEventData eventData)
+        {
+            OnHoverExit?.Invoke();
+        }
+
+        void OnDisable()
+        {
+            OnHoverExit?.Invoke();
         }
     }
 }

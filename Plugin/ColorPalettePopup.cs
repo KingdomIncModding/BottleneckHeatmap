@@ -15,8 +15,6 @@ namespace KingdomBottleneckHeatmap
         public static Sprite WindowSprite;
         public static Sprite ButtonSprite;
         public static Sprite CloseButtonSprite;
-        public static GameObject ButtonPrefab;
-        public static GameObject CloseButtonPrefab;
         public static TMP_FontAsset Font;
         public static Material FontMaterial;
         public static bool Initialized;
@@ -54,7 +52,6 @@ namespace KingdomBottleneckHeatmap
                     var apply = buttons.FirstOrDefault(b => b.name == "Apply" || b.name == "Cancel" || b.name == "KeyBindings");
                     if (apply != null)
                     {
-                        ButtonPrefab = apply.gameObject;
                         var bImg = apply.GetComponent<Image>();
                         if (bImg != null && bImg.sprite != null) ButtonSprite = bImg.sprite;
                     }
@@ -62,7 +59,6 @@ namespace KingdomBottleneckHeatmap
                     var close = buttons.FirstOrDefault(b => b.name == "Close" || b.name == "Back" || b.name.StartsWith("Close"));
                     if (close != null)
                     {
-                        CloseButtonPrefab = close.gameObject;
                         var cImg = close.GetComponent<Image>();
                         if (cImg != null && cImg.sprite != null) CloseButtonSprite = cImg.sprite;
                     }
@@ -254,19 +250,23 @@ namespace KingdomBottleneckHeatmap
 
         public static void Open(BottleneckState targetState = BottleneckState.Running)
         {
-            if (!_instance)
+            try
             {
-                var canvas = FindAnyObjectByType<Canvas>();
-                if (!canvas) return;
+                EnsureInstance();
+                if (!_instance)
+                {
+                    BottleneckHeatmapPlugin.Instance?.Log?.LogError("ColorPalettePopup.Open: instance failed to create");
+                    return;
+                }
 
-                var go = new GameObject("BottleneckColorPalettePopup", typeof(RectTransform));
-                go.transform.SetParent(canvas.transform, false);
-                _instance = go.AddComponent<ColorPalettePopup>();
+                _instance.gameObject.SetActive(true);
+                _instance.transform.SetAsLastSibling();
+                _instance.SelectState(targetState);
             }
-
-            _instance.gameObject.SetActive(true);
-            _instance.transform.SetAsLastSibling();
-            _instance.SelectState(targetState);
+            catch (Exception ex)
+            {
+                BottleneckHeatmapPlugin.Instance?.Log?.LogError($"ColorPalettePopup.Open error: {ex}");
+            }
         }
 
         public static void Close()
@@ -278,10 +278,38 @@ namespace KingdomBottleneckHeatmap
             }
         }
 
+        static void EnsureInstance()
+        {
+            if (_instance && _instance.gameObject) return;
+
+            var go = new GameObject("BottleneckColorPalettePopup", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster), typeof(CanvasScaler));
+            UnityEngine.Object.DontDestroyOnLoad(go);
+
+            var canvas = go.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = 32000;
+
+            var scaler = go.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = 0.5f;
+
+            _instance = go.AddComponent<ColorPalettePopup>();
+        }
+
         void Awake()
         {
-            VanillaTheme.Ensure();
-            BuildUI();
+            try
+            {
+                VanillaTheme.Ensure();
+                BuildUI();
+            }
+            catch (Exception ex)
+            {
+                BottleneckHeatmapPlugin.Instance?.Log?.LogError($"ColorPalettePopup.Awake error: {ex}");
+            }
         }
 
         void Update()
@@ -785,40 +813,8 @@ namespace KingdomBottleneckHeatmap
 
         Button CreateThemedButton(Transform parent, string name, string label, Vector2 pos, Vector2 size, Action onClick)
         {
-            GameObject btnObj;
-            Button btn;
-            TMP_Text btnText;
-
-            if (VanillaTheme.ButtonPrefab != null)
-            {
-                btnObj = UnityEngine.Object.Instantiate(VanillaTheme.ButtonPrefab, parent);
-                btnObj.name = name;
-                btn = btnObj.GetComponent<Button>();
-                btn.onClick = new Button.ButtonClickedEvent();
-                btnText = btnObj.GetComponentInChildren<TMP_Text>(true);
-            }
-            else
-            {
-                btnObj = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
-                btnObj.transform.SetParent(parent, false);
-                var img = btnObj.GetComponent<Image>();
-                if (VanillaTheme.ButtonSprite != null)
-                {
-                    img.sprite = VanillaTheme.ButtonSprite;
-                    img.type = Image.Type.Sliced;
-                    img.color = Color.white;
-                }
-                else
-                {
-                    img.color = new Color(0.25f, 0.22f, 0.20f, 1f);
-                }
-                btn = btnObj.GetComponent<Button>();
-                btn.targetGraphic = img;
-
-                var textObj = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
-                textObj.transform.SetParent(btnObj.transform, false);
-                btnText = textObj.GetComponent<TextMeshProUGUI>();
-            }
+            var btnObj = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+            btnObj.transform.SetParent(parent, false);
 
             var rt = (RectTransform)btnObj.transform;
             rt.anchorMin = new Vector2(0f, 1f);
@@ -827,77 +823,62 @@ namespace KingdomBottleneckHeatmap
             rt.anchoredPosition = pos;
             rt.sizeDelta = size;
 
+            var img = btnObj.GetComponent<Image>();
+            if (VanillaTheme.ButtonSprite != null)
+            {
+                img.sprite = VanillaTheme.ButtonSprite;
+                img.type = Image.Type.Sliced;
+                img.color = Color.white;
+            }
+            else
+            {
+                img.color = new Color(0.24f, 0.20f, 0.16f, 1f);
+            }
+
+            var btn = btnObj.GetComponent<Button>();
+            btn.targetGraphic = img;
+
+            var colors = btn.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = new Color(1.15f, 1.15f, 1.10f, 1f);
+            colors.pressedColor = new Color(0.80f, 0.75f, 0.70f, 1f);
+            btn.colors = colors;
+
+            var textObj = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            textObj.transform.SetParent(btnObj.transform, false);
+            var tRt = (RectTransform)textObj.transform;
+            tRt.anchorMin = Vector2.zero;
+            tRt.anchorMax = Vector2.one;
+            tRt.offsetMin = new Vector2(4, 2);
+            tRt.offsetMax = new Vector2(-4, -2);
+
+            var btnText = textObj.GetComponent<TextMeshProUGUI>();
+            if (VanillaTheme.Font != null)
+            {
+                btnText.font = VanillaTheme.Font;
+                btnText.fontSharedMaterial = VanillaTheme.FontMaterial;
+            }
+            btnText.text = label;
+            btnText.alignment = TextAlignmentOptions.Center;
+            btnText.fontSizeMin = 10;
+            btnText.fontSizeMax = 14;
+            btnText.enableAutoSizing = true;
+            btnText.color = new Color(0.96f, 0.94f, 0.90f);
+            btnText.raycastTarget = false;
+
             btn.onClick.AddListener(() =>
             {
                 UISounds.TurnPage();
                 onClick?.Invoke();
             });
 
-            if (btnText != null)
-            {
-                if (VanillaTheme.Font != null)
-                {
-                    btnText.font = VanillaTheme.Font;
-                    btnText.fontSharedMaterial = VanillaTheme.FontMaterial;
-                }
-                btnText.text = label;
-                btnText.alignment = TextAlignmentOptions.Center;
-                btnText.fontSizeMin = 10;
-                btnText.fontSizeMax = 14;
-                btnText.enableAutoSizing = true;
-                btnText.color = new Color(0.96f, 0.94f, 0.90f);
-            }
-
             return btn;
         }
 
         void CreateCloseButton(Transform parent, Vector2 pos, Action onClick)
         {
-            GameObject closeObj;
-            Button btn;
-
-            if (VanillaTheme.CloseButtonPrefab != null)
-            {
-                closeObj = UnityEngine.Object.Instantiate(VanillaTheme.CloseButtonPrefab, parent);
-                closeObj.name = "CloseBtn";
-                btn = closeObj.GetComponent<Button>();
-                btn.onClick = new Button.ButtonClickedEvent();
-            }
-            else
-            {
-                closeObj = new GameObject("CloseBtn", typeof(RectTransform), typeof(Image), typeof(Button));
-                closeObj.transform.SetParent(parent, false);
-                var img = closeObj.GetComponent<Image>();
-                if (VanillaTheme.CloseButtonSprite != null)
-                {
-                    img.sprite = VanillaTheme.CloseButtonSprite;
-                    img.color = Color.white;
-                }
-                else
-                {
-                    img.color = new Color(0.35f, 0.18f, 0.18f, 1f);
-                }
-                btn = closeObj.GetComponent<Button>();
-                btn.targetGraphic = img;
-
-                var textObj = new GameObject("X", typeof(RectTransform), typeof(TextMeshProUGUI));
-                textObj.transform.SetParent(closeObj.transform, false);
-                var t = textObj.GetComponent<TextMeshProUGUI>();
-                if (VanillaTheme.Font != null)
-                {
-                    t.font = VanillaTheme.Font;
-                    t.fontSharedMaterial = VanillaTheme.FontMaterial;
-                }
-                t.text = "X";
-                t.fontSize = 15;
-                t.fontStyle = FontStyles.Bold;
-                t.color = Color.white;
-                t.alignment = TextAlignmentOptions.Center;
-                var trt = (RectTransform)textObj.transform;
-                trt.anchorMin = Vector2.zero;
-                trt.anchorMax = Vector2.one;
-                trt.offsetMin = trt.offsetMax = Vector2.zero;
-            }
+            var closeObj = new GameObject("CloseBtn", typeof(RectTransform), typeof(Image), typeof(Button));
+            closeObj.transform.SetParent(parent, false);
 
             var rt = (RectTransform)closeObj.transform;
             rt.anchorMin = new Vector2(1f, 1f);
@@ -905,6 +886,51 @@ namespace KingdomBottleneckHeatmap
             rt.pivot = new Vector2(1f, 1f);
             rt.anchoredPosition = pos;
             rt.sizeDelta = new Vector2(28f, 28f);
+
+            var img = closeObj.GetComponent<Image>();
+            if (VanillaTheme.CloseButtonSprite != null)
+            {
+                img.sprite = VanillaTheme.CloseButtonSprite;
+                img.color = Color.white;
+            }
+            else if (VanillaTheme.ButtonSprite != null)
+            {
+                img.sprite = VanillaTheme.ButtonSprite;
+                img.type = Image.Type.Sliced;
+                img.color = Color.white;
+            }
+            else
+            {
+                img.color = new Color(0.35f, 0.18f, 0.18f, 1f);
+            }
+
+            var btn = closeObj.GetComponent<Button>();
+            btn.targetGraphic = img;
+
+            var colors = btn.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = new Color(1.2f, 0.8f, 0.8f, 1f);
+            colors.pressedColor = new Color(0.8f, 0.5f, 0.5f, 1f);
+            btn.colors = colors;
+
+            var textObj = new GameObject("X", typeof(RectTransform), typeof(TextMeshProUGUI));
+            textObj.transform.SetParent(closeObj.transform, false);
+            var t = textObj.GetComponent<TextMeshProUGUI>();
+            if (VanillaTheme.Font != null)
+            {
+                t.font = VanillaTheme.Font;
+                t.fontSharedMaterial = VanillaTheme.FontMaterial;
+            }
+            t.text = "✕";
+            t.fontSize = 16;
+            t.fontStyle = FontStyles.Bold;
+            t.color = new Color(0.95f, 0.85f, 0.65f);
+            t.alignment = TextAlignmentOptions.Center;
+            t.raycastTarget = false;
+            var trt = (RectTransform)textObj.transform;
+            trt.anchorMin = Vector2.zero;
+            trt.anchorMax = Vector2.one;
+            trt.offsetMin = trt.offsetMax = Vector2.zero;
 
             btn.onClick.AddListener(() =>
             {
