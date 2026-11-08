@@ -16,7 +16,7 @@ namespace KingdomBottleneckHeatmap
     public sealed class BottleneckHeatmapPlugin : BaseUnityPlugin
     {
         public const string Id = "urakka.kingdominc.bottleneckheatmap";
-        public const string Version = "1.1.1";
+        public const string Version = "1.1.2";
 
         public static BottleneckHeatmapPlugin Instance { get; private set; }
         public BepInEx.Logging.ManualLogSource Log => Logger;
@@ -171,10 +171,16 @@ namespace KingdomBottleneckHeatmap
                     string clogHex = CloggedColorConfig?.Value ?? "#FF3842";
                     string fullHex = FullStorageColorConfig?.Value ?? "#B042FF";
 
-                    string msg = enabled
-                        ? $"Bottleneck Heatmap: Active (<color={runHex}>Running</color>  <color={starvHex}>Starved</color>  <color={clogHex}>Clogged</color>  <color={fullHex}>Full</color>)"
-                        : "Bottleneck Heatmap: Disabled";
-                    UIStatusMessage.Show(msg, "Icons_17", false);
+                    var msgObj = UIStatusMessage.Show(
+                        enabled ? "Bottleneck Heatmap: Active" : "Bottleneck Heatmap: Disabled",
+                        "Icons_17",
+                        false
+                    );
+
+                    if (enabled && msgObj != null && msgObj.StatusText != null)
+                    {
+                        msgObj.StatusText.text = $"Bottleneck Heatmap: Active (<color={runHex}>Running</color>  <color={starvHex}>Starved</color>  <color={clogHex}>Clogged</color>  <color={fullHex}>Full</color>)";
+                    }
                 }
                 catch
                 {

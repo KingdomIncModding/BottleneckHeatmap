@@ -1,3 +1,6 @@
+Version 1.1.2:
+- Fixed toast notification rich text parsing: directly assign TextMeshPro text on UIStatusMessage to prevent Kingdom Inc's localization regex (#highlight# syntax) from corrupting hex color tags into literal text.
+
 Version 1.1.1:
 - Replaced emoji symbols in toggle notifications with TextMeshPro color-coded text (<color=#HEX>Running</color> etc.) to prevent missing glyph boxes (□) in Kingdom Inc's retro pixel font.
 
