@@ -1,3 +1,11 @@
+Version 1.1.0:
+- Added dedicated Full Storage state (vibrant Purple by default, #B042FF) exclusively for storage containers (Stockpiles and global Armories) when they reach capacity.
+- Added comprehensive Foundation Mod Config settings:
+  - Toggle Hotkey selector (H, B, C, F, G, M, N, P, Tab, F1-F10, etc.).
+  - Color palette customization for all states: Running, Starved, Clogged, Full Storage, and Idle.
+- Added 🟣 Full indicator to the on-screen toggle notification banner.
+- Real-time live updating: changing colors or hotkeys in Foundation Mod Config instantly updates on-screen overlays without needing to reload.
+
 Version 1.0.1:
 - Fix Mod Bar toggle button width (160) and TextMeshPro overflow so "Heatmap: ON" / "Heatmap: OFF" displays completely without ellipsis.
 

@@ -2,6 +2,7 @@ using System;
 using KingdomFoundation.Api;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 namespace KingdomBottleneckHeatmap
@@ -10,6 +11,102 @@ namespace KingdomBottleneckHeatmap
     {
         static IModBarRegistration _barRegistration;
         static HeatmapBarView _activeView;
+
+        static readonly (string Label, Key Key)[] HotkeyOptions = new (string, Key)[]
+        {
+            ("H (Default)", Key.H),
+            ("B", Key.B),
+            ("C", Key.C),
+            ("F", Key.F),
+            ("G", Key.G),
+            ("J", Key.J),
+            ("K", Key.K),
+            ("M", Key.M),
+            ("N", Key.N),
+            ("P", Key.P),
+            ("T", Key.T),
+            ("V", Key.V),
+            ("X", Key.X),
+            ("Z", Key.Z),
+            ("Tab", Key.Tab),
+            ("F1", Key.F1),
+            ("F2", Key.F2),
+            ("F3", Key.F3),
+            ("F4", Key.F4),
+            ("F5", Key.F5),
+            ("F6", Key.F6),
+            ("F7", Key.F7),
+            ("F8", Key.F8),
+            ("F9", Key.F9),
+            ("F10", Key.F10)
+        };
+
+        static readonly (string Label, string Hex)[] RunningColors = new (string, string)[]
+        {
+            ("Emerald Green (#26FA73 - Default)", "#26FA73"),
+            ("Neon Mint (#00FFB2)", "#00FFB2"),
+            ("Cyan Glow (#00D9FF)", "#00D9FF"),
+            ("Lime Green (#A6FF00)", "#A6FF00")
+        };
+
+        static readonly (string Label, string Hex)[] StarvedColors = new (string, string)[]
+        {
+            ("Bright Amber (#FFD92E - Default)", "#FFD92E"),
+            ("Warm Orange (#FFA31A)", "#FFA31A"),
+            ("Deep Peach (#FF8533)", "#FF8533"),
+            ("Sun Yellow (#FFF033)", "#FFF033")
+        };
+
+        static readonly (string Label, string Hex)[] CloggedColors = new (string, string)[]
+        {
+            ("Alert Crimson (#FF3842 - Default)", "#FF3842"),
+            ("Ruby Red (#FF1A4B)", "#FF1A4B"),
+            ("Hot Coral (#FF5252)", "#FF5252"),
+            ("Electric Rose (#FF007F)", "#FF007F")
+        };
+
+        static readonly (string Label, string Hex)[] FullStorageColors = new (string, string)[]
+        {
+            ("Royal Purple (#B042FF - Default)", "#B042FF"),
+            ("Electric Violet (#8C28FF)", "#8C28FF"),
+            ("Vibrant Magenta (#DF2BFF)", "#DF2BFF"),
+            ("Deep Amethyst (#681EC9)", "#681EC9"),
+            ("Soft Lavender (#C97DFF)", "#C97DFF")
+        };
+
+        static readonly (string Label, string Hex)[] IdleColors = new (string, string)[]
+        {
+            ("Slate Blue (#8C9EB8 - Default)", "#8C9EB8"),
+            ("Dim Charcoal (#505A69)", "#505A69"),
+            ("Soft Gray (#A0AAB8)", "#A0AAB8"),
+            ("Steel Navy (#41536B)", "#41536B")
+        };
+
+        static int FindKeyIndex(Key key)
+        {
+            for (int i = 0; i < HotkeyOptions.Length; i++)
+            {
+                if (HotkeyOptions[i].Key == key) return i;
+            }
+            return 0;
+        }
+
+        static int FindColorIndex((string Label, string Hex)[] options, string hex)
+        {
+            if (string.IsNullOrEmpty(hex)) return 0;
+            for (int i = 0; i < options.Length; i++)
+            {
+                if (string.Equals(options[i].Hex, hex, StringComparison.OrdinalIgnoreCase)) return i;
+            }
+            return 0;
+        }
+
+        static string[] GetLabels((string Label, string Hex)[] options)
+        {
+            var labels = new string[options.Length];
+            for (int i = 0; i < options.Length; i++) labels[i] = options[i].Label;
+            return labels;
+        }
 
         public static bool IsAvailable
         {
@@ -132,6 +229,115 @@ namespace KingdomBottleneckHeatmap
                     plugin.Config.Save();
                 },
                 getter: () => plugin.ShowToastConfig.Value
+            );
+
+            // Toggle Hotkey Dropdown
+            var hotkeyLabels = new string[HotkeyOptions.Length];
+            for (int i = 0; i < HotkeyOptions.Length; i++) hotkeyLabels[i] = HotkeyOptions[i].Label;
+
+            section.AddDropdown(
+                "Toggle Hotkey",
+                hotkeyLabels,
+                FindKeyIndex(plugin.ToggleKeyConfig.Value),
+                idx =>
+                {
+                    if (idx >= 0 && idx < HotkeyOptions.Length)
+                    {
+                        plugin.ToggleKeyConfig.Value = HotkeyOptions[idx].Key;
+                        plugin.Config.Save();
+                    }
+                },
+                getter: () => FindKeyIndex(plugin.ToggleKeyConfig.Value)
+            );
+
+            // Running Color Dropdown
+            section.AddDropdown(
+                "Running Color (Active)",
+                GetLabels(RunningColors),
+                FindColorIndex(RunningColors, plugin.RunningColorConfig.Value),
+                idx =>
+                {
+                    if (idx >= 0 && idx < RunningColors.Length)
+                    {
+                        plugin.RunningColorConfig.Value = RunningColors[idx].Hex;
+                        plugin.Config.Save();
+                        plugin.UpdateMaterialColors();
+                        plugin.RefreshAllOverlays();
+                    }
+                },
+                getter: () => FindColorIndex(RunningColors, plugin.RunningColorConfig.Value)
+            );
+
+            // Starved Color Dropdown
+            section.AddDropdown(
+                "Starved Color (Waiting)",
+                GetLabels(StarvedColors),
+                FindColorIndex(StarvedColors, plugin.StarvedColorConfig.Value),
+                idx =>
+                {
+                    if (idx >= 0 && idx < StarvedColors.Length)
+                    {
+                        plugin.StarvedColorConfig.Value = StarvedColors[idx].Hex;
+                        plugin.Config.Save();
+                        plugin.UpdateMaterialColors();
+                        plugin.RefreshAllOverlays();
+                    }
+                },
+                getter: () => FindColorIndex(StarvedColors, plugin.StarvedColorConfig.Value)
+            );
+
+            // Clogged Color Dropdown
+            section.AddDropdown(
+                "Clogged Color (Blocked)",
+                GetLabels(CloggedColors),
+                FindColorIndex(CloggedColors, plugin.CloggedColorConfig.Value),
+                idx =>
+                {
+                    if (idx >= 0 && idx < CloggedColors.Length)
+                    {
+                        plugin.CloggedColorConfig.Value = CloggedColors[idx].Hex;
+                        plugin.Config.Save();
+                        plugin.UpdateMaterialColors();
+                        plugin.RefreshAllOverlays();
+                    }
+                },
+                getter: () => FindColorIndex(CloggedColors, plugin.CloggedColorConfig.Value)
+            );
+
+            // Full Storage Color Dropdown
+            section.AddDropdown(
+                "Full Storage Color (Containers)",
+                GetLabels(FullStorageColors),
+                FindColorIndex(FullStorageColors, plugin.FullStorageColorConfig.Value),
+                idx =>
+                {
+                    if (idx >= 0 && idx < FullStorageColors.Length)
+                    {
+                        plugin.FullStorageColorConfig.Value = FullStorageColors[idx].Hex;
+                        plugin.Config.Save();
+                        plugin.UpdateMaterialColors();
+                        plugin.RefreshAllOverlays();
+                    }
+                },
+                getter: () => FindColorIndex(FullStorageColors, plugin.FullStorageColorConfig.Value)
+            );
+
+            // Idle Color Dropdown
+            section.AddDropdown(
+                "Idle Color (Dormant)",
+                GetLabels(IdleColors),
+                FindColorIndex(IdleColors, plugin.IdleColorConfig.Value),
+                idx =>
+                {
+                    if (idx >= 0 && idx < IdleColors.Length)
+                    {
+                        plugin.IdleColorConfig.Value = IdleColors[idx].Hex;
+                        plugin.Config.Save();
+                        plugin.UpdateMaterialColors();
+                        plugin.RefreshAllOverlays();
+                    }
+                },
+                getter: () => FindColorIndex(IdleColors, plugin.IdleColorConfig.Value)
             );
         }
 

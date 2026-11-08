@@ -22,7 +22,20 @@ namespace KingdomBottleneckHeatmap
             if (element == null)
                 return BottleneckState.Idle;
 
-            // 1. Output congestion check (highest priority: if blocked, it's a bottleneck!)
+            // 0. Storage Containers: when full, mark as FullStorage!
+            if (element is Stockpile stockpile)
+            {
+                if (stockpile.Contents.Count >= stockpile.Capacity)
+                    return BottleneckState.FullStorage;
+            }
+            if (element is Armory armory)
+            {
+                if (armory.ArmoryType != null && GamePlayer.Current != null &&
+                    !GamePlayer.Current.Armory.CanAddTo(armory.Channel, armory.ArmoryType, armory.MaxItems))
+                    return BottleneckState.FullStorage;
+            }
+
+            // 1. Output congestion check (highest priority for production: if blocked, it's a bottleneck!)
             if (OutputFullField?.GetValue(world) is TMP_Text outputText && outputText && outputText.gameObject.activeSelf)
                 return BottleneckState.Clogged;
 

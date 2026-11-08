@@ -1,5 +1,5 @@
-[b]Bottleneck Heatmap - 1.0.0[/b]
-Real-time visual diagnostic heatmap for Kingdom Inc workshops. Color-codes all workshop nodes and connecting pipes with semi-transparent overlays to instantly identify running lines, starved machines, and clogged bottlenecks.
+[b]Bottleneck Heatmap - 1.1.0[/b]
+Real-time visual diagnostic heatmap for Kingdom Inc workshops. Color-codes all workshop nodes and connecting pipes with semi-transparent overlays to instantly identify running lines, starved machines, clogged bottlenecks, and full storage containers.
 
 [b]Features[/b]
 [list]
@@ -8,11 +8,12 @@ Real-time visual diagnostic heatmap for Kingdom Inc workshops. Color-codes all w
   - [b]🟢 Running (Mint Green):[/b] Actively processing recipes, producing resources, or transferring items through pipes.
   - [b]🟡 Starved (Golden Amber):[/b] Missing required recipe reagents, unfulfilled resource quotas, or pipes waiting for items from upstream.
   - [b]🔴 Clogged (Crimson Coral):[/b] Downstream output buffer full, item rejected, or jammed pipe connections.
+  - [b]🟣 Full Storage (Royal Purple):[/b] Storage containers (Stockpiles and global Armories) that have reached maximum capacity.
   - [b]⚪ Idle (Slate):[/b] Unconfigured recipes, dormant machines, or empty/dead pipe branches.
-[*]Instant Hotkey Toggle: Press [b]H[/b] (configurable) at any time to toggle the heatmap on or off.
+[*]Instant Hotkey Toggle: Press [b]H[/b] (or customize to any key) at any time to toggle the heatmap on or off.
 [*]Foundation Integration:
-  - Adds a styled [b]Heatmap: ON / OFF[/b] toggle button directly onto the in-game [b]Mod Bar[/b], perfectly aligned with the top HUD.
-  - Adds full settings under [b]Mod Config[/b]: adjust node overlay opacity, pipe glow opacity, pipe line width multiplier, toggle idle element visibility, and configure notifications.
+  - Adds a styled [b]Heatmap: ON / OFF[/b] toggle button directly onto the in-game [b]Mod Bar[/b], perfectly aligned with the top HUD without ellipsis or truncation.
+  - Full [b]Mod Config[/b] menu: customize your Toggle Hotkey, adjust color palettes for all 5 states, configure node and pipe opacities, tune pipe glow width, toggle idle elements, and configure notification toasts.
 [*]Zero Save Footprint: Visual-only runtime diagnostic; does not alter save files, recipe formulas, or vanilla mechanics.
 [/list]
 

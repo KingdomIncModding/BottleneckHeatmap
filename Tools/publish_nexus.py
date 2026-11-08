@@ -118,8 +118,9 @@ def main():
 
     file_desc = (
         "Real-time visual diagnostic heatmap for Kingdom Inc workshops.\n"
-        "Color-codes nodes and pipes by Running (green), Starved (amber), Clogged (red), and Idle (slate).\n"
+        "Color-codes nodes and pipes by Running (green), Starved (amber), Clogged (red), Full Storage (purple), and Idle (slate).\n"
         "Adds an aligned Heatmap toggle button directly to the Foundation Mod Bar, plus instant hotkey 'H' toggle.\n"
+        "Foundation Mod Config support for hotkey selection, color palette choices, opacity, and glow width.\n"
         "Requires BepInEx 5 (Windows x64 Mono) and optionally Foundation 0.5.0+."
     )
 
@@ -263,14 +264,10 @@ def main():
     # 4. Post Changelog
     print("Checking changelog...")
     try:
-        changelog_text = (
-            "Initial release 1.0.0.\n"
-            "- Real-time transparent visual diagnostic overlays for workshop nodes and pipes.\n"
-            "- Running (green), Starved (amber), Clogged (red), and Idle (slate) state detection.\n"
-            "- Aligned Heatmap: ON / OFF toggle button on Foundation Mod Bar.\n"
-            "- Instant hotkey toggle (H by default, configurable).\n"
-            "- Foundation Mod Config support for opacity and glow width customization."
-        )
+        changelog_content = (OUT / "CHANGELOG.txt").read_text(encoding="utf-8")
+        pattern = rf"Version {re.escape(VERSION)}:\s*\n(.*?)(?=\nVersion |\Z)"
+        match = re.search(pattern, changelog_content, re.DOTALL)
+        changelog_text = match.group(1).strip() if match else changelog_content[:500]
         cl_res = api(
             f"/mods/{p['id']}/changelogs",
             "POST",

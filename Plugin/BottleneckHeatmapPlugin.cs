@@ -16,7 +16,7 @@ namespace KingdomBottleneckHeatmap
     public sealed class BottleneckHeatmapPlugin : BaseUnityPlugin
     {
         public const string Id = "urakka.kingdominc.bottleneckheatmap";
-        public const string Version = "1.0.1";
+        public const string Version = "1.1.0";
 
         public static BottleneckHeatmapPlugin Instance { get; private set; }
         public BepInEx.Logging.ManualLogSource Log => Logger;
@@ -28,6 +28,11 @@ namespace KingdomBottleneckHeatmap
         public ConfigEntry<float> PipeWidthConfig;
         public ConfigEntry<bool> ShowIdleConfig;
         public ConfigEntry<bool> ShowToastConfig;
+        public ConfigEntry<string> RunningColorConfig;
+        public ConfigEntry<string> StarvedColorConfig;
+        public ConfigEntry<string> CloggedColorConfig;
+        public ConfigEntry<string> FullStorageColorConfig;
+        public ConfigEntry<string> IdleColorConfig;
 
         public bool IsHeatmapEnabled => EnabledConfig?.Value ?? true;
         public float NodeOpacity => NodeOpacityConfig?.Value ?? 0.58f;
@@ -77,6 +82,33 @@ namespace KingdomBottleneckHeatmap
                 new ConfigDescription("Display an on-screen status banner notification when toggling heatmap.")
             );
 
+            RunningColorConfig = Config.Bind(
+                "Colors", "RunningColor", "#26FA73",
+                new ConfigDescription("Hex color for active / running nodes and pipes.")
+            );
+
+            StarvedColorConfig = Config.Bind(
+                "Colors", "StarvedColor", "#FFD92E",
+                new ConfigDescription("Hex color for starved / waiting nodes and pipes.")
+            );
+
+            CloggedColorConfig = Config.Bind(
+                "Colors", "CloggedColor", "#FF3842",
+                new ConfigDescription("Hex color for clogged / blocked nodes and pipes.")
+            );
+
+            FullStorageColorConfig = Config.Bind(
+                "Colors", "FullStorageColor", "#B042FF",
+                new ConfigDescription("Hex color for full storage containers (Stockpiles).")
+            );
+
+            IdleColorConfig = Config.Bind(
+                "Colors", "IdleColor", "#8C9EB8",
+                new ConfigDescription("Hex color for idle / dormant nodes and pipes.")
+            );
+
+            UpdateMaterialColors();
+
             _harmony = new Harmony(Id);
             ApplyHarmonyPatches();
 
@@ -109,6 +141,17 @@ namespace KingdomBottleneckHeatmap
             }
         }
 
+        public void UpdateMaterialColors()
+        {
+            Color running = ColorUtility.TryParseHtmlString(RunningColorConfig?.Value, out var c1) ? c1 : new Color(0.15f, 0.98f, 0.45f, 1f);
+            Color starved = ColorUtility.TryParseHtmlString(StarvedColorConfig?.Value, out var c2) ? c2 : new Color(1.00f, 0.85f, 0.18f, 1f);
+            Color clogged = ColorUtility.TryParseHtmlString(CloggedColorConfig?.Value, out var c3) ? c3 : new Color(1.00f, 0.22f, 0.26f, 1f);
+            Color fullStorage = ColorUtility.TryParseHtmlString(FullStorageColorConfig?.Value, out var c4) ? c4 : new Color(0.69f, 0.26f, 1.00f, 1f);
+            Color idle = ColorUtility.TryParseHtmlString(IdleColorConfig?.Value, out var c5) ? c5 : new Color(0.55f, 0.62f, 0.75f, 1f);
+
+            HeatmapMaterials.SetColors(running, starved, clogged, fullStorage, idle);
+        }
+
         public void SetHeatmapEnabled(bool enabled, bool fromUser = false)
         {
             if (EnabledConfig.Value != enabled)
@@ -124,7 +167,7 @@ namespace KingdomBottleneckHeatmap
                 try
                 {
                     string msg = enabled
-                        ? "Bottleneck Heatmap: Active (🟢 Running  🟡 Starved  🔴 Clogged)"
+                        ? "Bottleneck Heatmap: Active (🟢 Running  🟡 Starved  🔴 Clogged  🟣 Full)"
                         : "Bottleneck Heatmap: Disabled";
                     UIStatusMessage.Show(msg, "Icons_17", false);
                 }
