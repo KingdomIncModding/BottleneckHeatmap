@@ -5,11 +5,10 @@
     <Version>1.2.6</Version>
     <AssemblyName>BottleneckHeatmap</AssemblyName>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-    <GameRoot Condition="'$(GameRoot)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\'))\</GameRoot>
-    <AssemblySearchPaths>{HintPathFromItem};{RawFileName}</AssemblySearchPaths>
+    <GameRoot Condition="'$(GameRoot)' == ''">$(MSBuildThisFileDirectory)..\..\..\</GameRoot>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Plugin\*.cs" />
+    <Compile Include="src\**\*.cs" />
     <Reference Include="BepInEx"><HintPath>$(GameRoot)BepInEx\core\BepInEx.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Foundation"><HintPath>$(GameRoot)BepInEx\plugins\Foundation\Foundation.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="0Harmony"><HintPath>$(GameRoot)BepInEx\core\0Harmony.dll</HintPath><Private>false</Private></Reference>
@@ -23,4 +22,3 @@
     <Reference Include="Unity.TextMeshPro"><HintPath>$(GameRoot)KingdomInc_Data\Managed\Unity.TextMeshPro.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
 </Project>
-

@@ -1,0 +1,66 @@
+{
+  "id": "BottleneckHeatmap",
+  "name": "Bottleneck Heatmap",
+  "version": "1.2.6",
+  "author": "Urakka",
+  "description": "Real-time diagnostic heatmap for Kingdom Inc workshops. Color-codes workshop nodes and pipes with semi-transparent overlays to instantly identify running lines, starved machines, clogged bottlenecks, and full storage.",
+  "repository": {
+    "platform": "GitHub",
+    "owner": "urakkaamyx",
+    "name": "KingdomInc_BottleneckHeatmap",
+    "url": "https://github.com/urakkaamyx/KingdomInc_BottleneckHeatmap",
+    "branch": "master",
+    "visibility": "public",
+    "topics": [
+      "kingdom-inc",
+      "kingdom-inc-mod",
+      "bepinex",
+      "harmony",
+      "diagnostic",
+      "heatmap"
+    ],
+    "latestTag": "v1.2.6"
+  },
+  "distribution": {
+    "nexus": {
+      "game": "kingdominc",
+      "modId": 21,
+      "fileId": null,
+      "url": "https://www.nexusmods.com/kingdominc/mods/21",
+      "requirements": [
+        {
+          "name": "Foundation",
+          "url": "https://www.nexusmods.com/kingdominc/mods/18",
+          "minimumVersion": "0.11.0",
+          "type": "nexus"
+        },
+        {
+          "name": "BepInEx 5",
+          "url": "https://github.com/BepInEx/BepInEx/releases",
+          "minimumVersion": "5.x",
+          "type": "offsite"
+        }
+      ],
+      "tags": [
+        "AI-Generated Content",
+        "Quality of Life",
+        "UI"
+      ],
+      "tagsVerified": false,
+      "requirementsVerified": false
+    }
+  },
+  "development": {
+    "framework": "Foundation",
+    "language": "C#",
+    "target": "netstandard2.1",
+    "dependencies": [
+      "BepInEx 5",
+      "Foundation >= 0.11.0"
+    ]
+  },
+  "publishing": {
+    "githubReleases": null,
+    "nexusMods": null
+  }
+}

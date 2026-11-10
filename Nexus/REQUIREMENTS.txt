@@ -1,7 +1,0 @@
-Kingdom Inc for Windows x64 (Mono)
-BepInEx 5 (5.4.21 or later, Windows x64 Mono):
-https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.6
-
-Foundation (0.5.0 or later, optional but recommended for Mod Bar and Mod Config):
-https://www.nexusmods.com/kingdominc/mods/18
-
