@@ -25,7 +25,7 @@
     "nexus": {
       "game": "kingdominc",
       "modId": 21,
-      "fileId": null,
+      "fileId": 8337945,
       "url": "https://www.nexusmods.com/kingdominc/mods/21",
       "requirements": [
         {
@@ -43,11 +43,12 @@
       ],
       "tags": [
         "AI-Generated Content",
+        "AI Media",
         "Quality of Life",
-        "UI"
+        "User Interface"
       ],
-      "tagsVerified": false,
-      "requirementsVerified": false
+      "tagsVerified": true,
+      "requirementsVerified": true
     }
   },
   "development": {
@@ -60,7 +61,7 @@
     ]
   },
   "publishing": {
-    "githubReleases": null,
-    "nexusMods": null
+    "githubReleases": "https://github.com/urakkaamyx/KingdomInc_BottleneckHeatmap/releases/tag/v1.2.6",
+    "nexusMods": "https://www.nexusmods.com/kingdominc/mods/21"
   }
 }
