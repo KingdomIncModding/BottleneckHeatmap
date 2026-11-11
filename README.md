@@ -1,52 +1,45 @@
 # Bottleneck Heatmap
 
-[GitHub releases](https://github.com/urakkaamyx/KingdomInc_BottleneckHeatmap/releases) · [Nexus Mods](https://www.nexusmods.com/kingdominc/mods/21) · Version 1.2.6
+Find bottlenecks in your Kingdom Inc. workshop at a glance. Bottleneck Heatmap adds translucent overlays to machines and connecting pipes, making it easier to see which production lines are working, waiting for materials, or blocked.
 
-Real-time diagnostic heatmap for Kingdom Inc workshops. Color-codes all workshop nodes and connecting pipes with semi-transparent overlays to instantly identify running lines, starved machines, clogged bottlenecks, and full storage containers.
+## Status Colors
+
+- **Running — Green:** A machine is processing or producing, or a pipe is transferring items.
+- **Starved — Amber:** A machine is missing ingredients or resources, or a pipe is waiting for upstream supply.
+- **Clogged — Red:** An output is full, an item is rejected, or a pipe connection is jammed.
+- **Full Storage — Purple:** A supported storage container has reached capacity.
+- **Idle — Gray:** A machine is not configured or active, or a pipe branch is empty.
 
 ## Features
 
-- **Transparent Overlays:** Preserves full readability of node icons, recipe cards, progress bars, ports, and pipe routes without visual occlusion.
-- **Node & Pipe State Evaluation:**
-  - 🟢 **Running (Mint Green):** Actively processing recipes, producing resources, or transferring items through pipes.
-  - 🟡 **Starved (Golden Amber):** Missing required recipe reagents, unfulfilled resource quotas, or pipes waiting for items from upstream.
-  - 🔴 **Clogged (Crimson Coral):** Downstream output buffer full, item rejected, or jammed pipe connections.
-  - 🟣 **Full Storage (Royal Purple):** Storage containers (Stockpiles and global Armories) that have reached maximum capacity.
-  - ⚪ **Idle (Slate):** Unconfigured recipes, dormant machines, or empty/dead pipe branches.
-- **Dynamic Color Variations Per State:**
-  - Select base colors individually for each state: Running, Starved, Clogged, Full Storage, and Idle.
-  - Automatically generates 5 surrounding hue variations (Base, Warm, Cool, Bright, Deep) selectable directly from Foundation Mod Config dropdowns or interactive cards in the Color Palette Wheel.
-- **Color Palette Generator Wheel:**
-  - Select any color using interactive Hue and Saturation/Brightness surfaces, preset swatches, or hex code.
-  - Generates and previews surrounding hue variations for the selected state.
-  - Accessible via Foundation Mod Config or by **Right-Clicking** the Heatmap button on the Mod Bar!
-- **Foundation Mod Config Integration:**
-  - **Percent Sliders** using Foundation's native `ModConfigSlider` (`section.AddSlider`) for Node Overlay Opacity (10%–100%) and Pipe Overlay Opacity (20%–100%).
-  - **Width Slider** for Pipe Glow Width (1.0x–2.5x).
-  - **Color Customization:** Dedicated color pickers and dynamic variation dropdowns for each state.
-  - **Vanilla Hotkey Setup:** Interactive key rebinding button in Mod Config, also integrated into Kingdom Inc's native Key Bindings options.
-- **Zero Save Footprint:** Visual-only runtime diagnostic; does not alter save files, recipe formulas, or vanilla mechanics.
+- **Readable overlays:** Machine icons, recipe cards, progress bars, ports, and pipe routes remain visible.
+- **Configurable appearance:** Adjust node and pipe opacity and pipe glow width in Foundation Mod Config.
+- **Custom status colors:** Choose a separate base color for each state, with Base, Warm, Cool, Bright, and Deep variations.
+- **Color Palette Wheel:** Select colors using a saturation/brightness area, hue strip, presets, or hex values.
+- **Quick toggle:** Press **H** by default, or use the Heatmap button on the Foundation Mod Bar. The hotkey can be rebound through the game's controls and mod settings.
+- **Visual-only:** The mod does not change recipes, production rules, or save data.
 
-## Hotkeys
+## Requirements
 
-- `H` — Toggle Bottleneck Heatmap overlay on/off (rebindable in Controls or Foundation Mod Config).
+- Kingdom Inc. for Windows x64 (Unity Mono).
+- [BepInEx 5](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.6).
+- [Foundation](https://www.nexusmods.com/kingdominc/mods/18) is recommended for the Mod Bar button and Mod Config integration; the existing mod page describes it as optional.
 
 ## Installation
 
-1. Install [BepInEx 5 (Windows x64 Mono)](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.6).
-2. Install [Foundation](https://www.nexusmods.com/kingdominc/mods/18) (0.11.0 or newer).
-3. Place `BottleneckHeatmap.dll` into `KingdomInc/BepInEx/plugins/BottleneckHeatmap/`.
-4. Launch the game. Press `H` in any workshop tab to inspect your production lines!
+1. Install BepInEx 5 and, if desired, Foundation.
+2. Close Kingdom Inc. before copying mod files.
+3. Extract the mod's release ZIP into the game folder. The DLL should be at `BepInEx/plugins/BottleneckHeatmap/BottleneckHeatmap.dll`.
+4. Launch Kingdom Inc., open a workshop flow diagram, and press **H** to toggle the overlay.
 
 ## Compatibility
 
-| Class.Method | Hook Type | Impact |
-|---|---|---|
-| WorldFlowElement.SetElement | Harmony Postfix | Attaches diagnostic overlay to newly created or loaded workshop nodes. |
-| WorldFlowPipe.SetFlowPipe | Harmony Postfix | Attaches diagnostic overlay to newly created or loaded pipes. |
-| WorldFlowPipe.UpdateLinePositions | Harmony Postfix | Updates pipe overlay geometry when pipes are bent or rerouted. |
-| WorldFlowPipe.ItemTransferred | Harmony Postfix | Tracks active throughput for pipe running status. |
-| WorldFlowPipe.ItemRejected | Harmony Postfix | Detects blocked downstream inputs and full buffers to flag clogged pipe status. |
-| WorldFlowManager.ShowFlow | Harmony Postfix | Refreshes node and pipe overlays when switching workshop tabs. |
-| PlayerInput.Awake | Harmony Postfix | Registers the configurable Bottleneck Heatmap toggle action into Kingdom Inc's native input rebinding system. |
-| KeyBindingRow.SetBinding | Harmony Postfix | Displays "Bottleneck Heatmap" as the human-readable label in the in-game key binding menu. |
+Bottleneck Heatmap is a client-side visual diagnostic mod. It does not edit saved games or change production mechanics. The existing Nexus listing states Windows 10/11 x64 support.
+
+## Removal
+
+Close the game and delete `BepInEx/plugins/BottleneckHeatmap/`.
+
+## Credits
+
+Created by **Urakka**. [Source code on GitHub](https://github.com/urakkaamyx/KingdomInc_BottleneckHeatmap).
