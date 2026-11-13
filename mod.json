@@ -7,8 +7,8 @@
   "repository": {
     "platform": "GitHub",
     "owner": "KingdomIncModding",
-    "name": "KingdomInc_BottleneckHeatmap",
-    "url": "https://github.com/KingdomIncModding/KingdomInc_BottleneckHeatmap",
+    "name": "BottleneckHeatmap",
+    "url": "https://github.com/KingdomIncModding/BottleneckHeatmap",
     "branch": "master",
     "visibility": "public",
     "topics": [
@@ -63,7 +63,7 @@
     "gameIntegration": "Foundation"
   },
   "publishing": {
-    "githubReleases": "https://github.com/KingdomIncModding/KingdomInc_BottleneckHeatmap/releases/tag/v1.2.6",
+    "githubReleases": "https://github.com/KingdomIncModding/BottleneckHeatmap/releases/tag/v1.2.6",
     "nexusMods": "https://www.nexusmods.com/kingdominc/mods/21",
     "archivePreviousReleases": false
   }
