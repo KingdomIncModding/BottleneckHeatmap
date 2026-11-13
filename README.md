@@ -1,6 +1,8 @@
 # Bottleneck Heatmap
 
-[GitHub releases](https://github.com/urakkaamyx/KingdomInc_BottleneckHeatmap/releases) · [Nexus Mods](https://www.nexusmods.com/kingdominc/mods/21) · Version 1.2.6
+**Current release: 1.2.7 — for Kingdom Inc game version 1.0.14.**
+
+[GitHub releases](https://github.com/urakkaamyx/KingdomInc_BottleneckHeatmap/releases) · [Nexus Mods](https://www.nexusmods.com/kingdominc/mods/21) · Version 1.2.7
 
 Real-time diagnostic heatmap for Kingdom Inc workshops. Color-codes all workshop nodes and connecting pipes with semi-transparent overlays to instantly identify running lines, starved machines, clogged bottlenecks, and full storage containers.
 
@@ -34,7 +36,7 @@ Real-time diagnostic heatmap for Kingdom Inc workshops. Color-codes all workshop
 ## Installation
 
 1. Install [BepInEx 5 (Windows x64 Mono)](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.6).
-2. Install [Foundation](https://www.nexusmods.com/kingdominc/mods/18) (0.11.0 or newer).
+2. Install [Foundation](https://www.nexusmods.com/kingdominc/mods/18) (0.14.0 or newer).
 3. Place `BottleneckHeatmap.dll` into `KingdomInc/BepInEx/plugins/BottleneckHeatmap/`.
 4. Launch the game. Press `H` in any workshop tab to inspect your production lines!
 
@@ -42,11 +44,11 @@ Real-time diagnostic heatmap for Kingdom Inc workshops. Color-codes all workshop
 
 | Class.Method | Hook Type | Impact |
 |---|---|---|
-| WorldFlowElement.SetElement | Harmony Postfix | Attaches diagnostic overlay to newly created or loaded workshop nodes. |
-| WorldFlowPipe.SetFlowPipe | Harmony Postfix | Attaches diagnostic overlay to newly created or loaded pipes. |
-| WorldFlowPipe.UpdateLinePositions | Harmony Postfix | Updates pipe overlay geometry when pipes are bent or rerouted. |
-| WorldFlowPipe.ItemTransferred | Harmony Postfix | Tracks active throughput for pipe running status. |
-| WorldFlowPipe.ItemRejected | Harmony Postfix | Detects blocked downstream inputs and full buffers to flag clogged pipe status. |
-| WorldFlowManager.ShowFlow | Harmony Postfix | Refreshes node and pipe overlays when switching workshop tabs. |
-| PlayerInput.Awake | Harmony Postfix | Registers the configurable Bottleneck Heatmap toggle action into Kingdom Inc's native input rebinding system. |
-| KeyBindingRow.SetBinding | Harmony Postfix | Displays "Bottleneck Heatmap" as the human-readable label in the in-game key binding menu. |
+| WorldFlowElement.SetElement | Foundation hook (postfix) | Attaches diagnostic overlay to newly created or loaded workshop nodes. |
+| WorldFlowPipe.SetFlowPipe | Foundation hook (postfix) | Attaches diagnostic overlay to newly created or loaded pipes. |
+| WorldFlowPipe.UpdateLinePositions | Foundation hook (postfix) | Updates pipe overlay geometry when pipes are bent or rerouted. |
+| WorldFlowPipe.ItemTransferred | Foundation hook (postfix) | Tracks active throughput for pipe running status. |
+| WorldFlowPipe.ItemRejected | Foundation hook (postfix) | Detects blocked downstream inputs and full buffers to flag clogged pipe status. |
+| WorldFlowManager.ShowFlow | Foundation hook (postfix) | Refreshes node and pipe overlays when switching workshop tabs. |
+| PlayerInput.Awake | Foundation hook (postfix) | Registers the configurable Bottleneck Heatmap toggle action into Kingdom Inc's native input rebinding system. |
+| KeyBindingRow.SetBinding | Foundation hook (postfix) | Displays "Bottleneck Heatmap" as the human-readable label in the in-game key binding menu. |

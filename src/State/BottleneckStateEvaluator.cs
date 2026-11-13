@@ -1,130 +1,113 @@
-using System.Reflection;
-using Assets.Behaviour.Flow;
-using Assets.Source.Flow;
-using Assets.Source.Flow.Elements;
-using Assets.Source.Player;
-using HarmonyLib;
-using TMPro;
+using KingdomFoundation.Api;
 using UnityEngine;
+using System.Reflection;
+using TMPro;
 
 namespace KingdomBottleneckHeatmap
 {
-    public static partial class BottleneckStateEvaluator
+    public static class BottleneckStateEvaluator
     {
-        static readonly FieldInfo OutputFullField = AccessTools.Field(typeof(WorldFlowElement), "_outputFull");
-
-
-        public static BottleneckState Evaluate(WorldFlowElement world)
+        public static BottleneckState Evaluate(Component world)
         {
             if (!world || !world.gameObject.activeInHierarchy)
                 return BottleneckState.Idle;
-
-            var element = world.Element;
-            if (element == null)
+            var element = FoundationApi.WorkspaceAccess.FromView(world);
+            var production = element?.Production;
+            if (production == null)
                 return BottleneckState.Idle;
-
-            // 0. Storage Containers: Stockpiles and Armories (including Hoards, Treasuries, Pantries)
-            if (element is Stockpile stockpile)
-            {
-                if (stockpile.Contents != null && stockpile.Contents.Count >= stockpile.Capacity)
-                    return BottleneckState.FullStorage;
-            }
-            if (element is Armory armory)
-            {
-                if (armory.ArmoryType != null && GamePlayer.Current != null &&
-                    !GamePlayer.Current.Armory.CanAddTo(armory.Channel, armory.ArmoryType, armory.MaxItems))
-                    return BottleneckState.FullStorage;
-            }
-
-            // Shop congestion: when gold cap is reached, shop is clogged
-            if (element is Shop shop)
-            {
-                if (shop.GoldCap > 0 && shop.CollectedGold >= shop.GoldCap)
-                    return BottleneckState.Clogged;
-            }
-
-            // 1. Output congestion check (highest priority for production: if blocked, it's a bottleneck!)
-            if (OutputFullField?.GetValue(world) is TMP_Text outputText && outputText && outputText.gameObject.activeSelf)
+            if (production.IsStockpile && production.HasStorageContents && production.StoredItemCount >= production.StorageCapacity)
+                return BottleneckState.FullStorage;
+            if (production.IsArmory && production.HasArmoryType && FoundationApi.Kingdom != null && !production.CanStoreArmoryItem)
+                return BottleneckState.FullStorage;
+            if (production.IsShop && production.ShopGoldCap > 0 && production.CollectedGold >= production.ShopGoldCap)
                 return BottleneckState.Clogged;
-
-            if (element.Progress >= 1f && element.Outputs != null && element.Outputs.Count > 0)
+            if (FoundationApi.WorkspaceVisuals.IsOutputFullIndicatorVisible(world))
+                return BottleneckState.Clogged;
+            if (production.Progress >= 1f && production.OutputCount > 0)
             {
-                bool anyCanBuffer = false;
-                for (int i = 0; i < element.Outputs.Count; i++)
-                {
-                    if (element.Outputs[i].CanBuffer)
+                bool canBuffer = false;
+                for (int i = 0; i < production.OutputCount; i++)
+                    if (production.OutputCanBuffer(i))
                     {
-                        anyCanBuffer = true;
+                        canBuffer = true;
                         break;
                     }
-                }
-                if (!anyCanBuffer)
+
+                if (!canBuffer)
                     return BottleneckState.Clogged;
             }
 
-            // 2. Recipe Elements (Smelters, Refiners, Crafters, Kitchens, Disenchanters, etc.)
-            if (element is RecipeElement recipeEl)
+            if (production.IsRecipe)
             {
-                if (recipeEl.Recipe == null)
+                if (!production.HasRecipe)
                     return BottleneckState.Idle;
-
-                if (recipeEl.Crafting || recipeEl.Input != null)
+                if (production.Crafting || production.HasCraftingInput)
                     return BottleneckState.Running;
-
-                // Check reagents
-                if (recipeEl.Recipe.Reagents != null && recipeEl.Recipe.Reagents.Length > 0)
-                {
-                    for (int i = 0; i < recipeEl.Recipe.Reagents.Length; i++)
-                    {
-                        var reagent = recipeEl.Recipe.Reagents[i];
-                        if (i >= recipeEl.Inputs.Count || recipeEl.Inputs[i].BufferedItems.Count < reagent.Count)
-                            return BottleneckState.Starved;
-                    }
-                }
-
-                // Check funds
-                var cost = recipeEl.GetCraftingCost();
-                if (cost != null && GamePlayer.Current != null && !GamePlayer.Current.CanAfford(cost))
+                for (int i = 0; i < production.ReagentCount; i++)
+                    if (i >= production.InputCount || production.BufferedInputCount(i) < production.ReagentAmount(i))
+                        return BottleneckState.Starved;
+                var cost = production.CraftingCost;
+                if (cost != null && FoundationApi.Kingdom != null && !FoundationApi.Kingdom.CanAfford(cost))
                     return BottleneckState.Starved;
-
-                if (element.Progress > 0f)
-                    return BottleneckState.Running;
-
-                return BottleneckState.Starved;
+                return production.Progress > 0f ? BottleneckState.Running : BottleneckState.Starved;
             }
 
-            // 3. Resource Elements (Mines, Farms, Foresters, Wells, etc.)
-            if (element is ResourceElement resourceEl)
+            if (production.IsResource)
             {
-                if (resourceEl.Resource == null || resourceEl.QueuedCount <= 0)
+                if (!production.HasResource || production.QueuedResourceCount <= 0)
                     return BottleneckState.Idle;
-
-                if (GamePlayer.Current != null && GamePlayer.Current.GetResourceQuotaMultiplier(resourceEl.Resource) <= 0.001f)
+                if (FoundationApi.Kingdom != null && production.ResourceQuotaMultiplier <= 0.001f)
                     return BottleneckState.Starved;
-
                 return BottleneckState.Running;
             }
 
-            // 4. Fallback for other FlowElements (Collectors, Stockpiles, etc.)
-            if (element.Progress > 0f)
+            if (production.Progress > 0f)
                 return BottleneckState.Running;
-
-            if (element.Inputs != null && element.Inputs.Count > 0)
+            if (production.InputCount > 0)
             {
-                bool allEmpty = true;
-                for (int i = 0; i < element.Inputs.Count; i++)
-                {
-                    if (element.Inputs[i].BufferedItems.Count > 0)
+                bool empty = true;
+                for (int i = 0; i < production.InputCount; i++)
+                    if (production.BufferedInputCount(i) > 0)
                     {
-                        allEmpty = false;
+                        empty = false;
                         break;
                     }
-                }
-                if (allEmpty)
+
+                if (empty)
                     return BottleneckState.Starved;
             }
 
             return BottleneckState.Idle;
+        }
+
+        public static BottleneckState Evaluate(Component worldPipe, float lastTransferTime, bool wasRejected)
+        {
+            if (!worldPipe || !worldPipe.gameObject.activeInHierarchy)
+                return BottleneckState.Idle;
+            var pipe = FoundationApi.WorkspaceVisuals.PipeFromView(worldPipe);
+            if (pipe == null)
+                return BottleneckState.Idle;
+            // 1. Blocked / Rejected checks
+            if (wasRejected || pipe.ItemRejected)
+                return BottleneckState.Clogged;
+            var output = pipe.ConnectedOutput;
+            var input = pipe.ConnectedInput;
+            if (output == null || input == null)
+                return BottleneckState.Idle;
+            var item = output.AvailableItem;
+            if (item != null)
+            {
+                if (!input.CanAcceptItem(item) || !input.CanBuffer)
+                    return BottleneckState.Clogged;
+            }
+
+            // 2. Active flow
+            if (Time.time - lastTransferTime <= 1.5f)
+                return BottleneckState.Running;
+            // 3. Starved / Empty
+            if (output.BufferedItemCount == 0)
+                return BottleneckState.Starved;
+            return BottleneckState.Running;
         }
     }
 }

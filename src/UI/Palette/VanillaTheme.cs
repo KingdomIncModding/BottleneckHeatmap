@@ -1,7 +1,7 @@
+using KingdomFoundation.Api;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Assets.Behaviour.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -10,7 +10,7 @@ using UnityEngine.UI;
 
 namespace KingdomBottleneckHeatmap
 {
-    internal static partial class VanillaTheme
+    internal static class VanillaTheme
     {
         public static Sprite WindowSprite;
         public static Sprite ButtonSprite;
@@ -18,13 +18,11 @@ namespace KingdomBottleneckHeatmap
         public static TMP_FontAsset Font;
         public static Material FontMaterial;
         public static bool Initialized;
-
-
         public static void Ensure()
         {
-            if (Initialized && WindowSprite != null && ButtonSprite != null && Font != null) return;
+            if (Initialized && WindowSprite != null && ButtonSprite != null && Font != null)
+                return;
             Initialized = true;
-
             try
             {
                 // 1. Text / Font from any active TextMeshPro in the game
@@ -40,7 +38,7 @@ namespace KingdomBottleneckHeatmap
                 }
 
                 // 2. OptionsUI elements
-                var options = Resources.FindObjectsOfTypeAll<Assets.Behaviour.UI.MainMenu.OptionsUI>().FirstOrDefault();
+                var options = FoundationApi.UiAccess.OptionsTemplate;
                 if (options != null)
                 {
                     var optImg = options.GetComponent<Image>();
@@ -54,21 +52,23 @@ namespace KingdomBottleneckHeatmap
                     if (apply != null)
                     {
                         var bImg = apply.GetComponent<Image>();
-                        if (bImg != null && bImg.sprite != null) ButtonSprite = bImg.sprite;
+                        if (bImg != null && bImg.sprite != null)
+                            ButtonSprite = bImg.sprite;
                     }
 
                     var close = buttons.FirstOrDefault(b => b.name == "Close" || b.name == "Back" || b.name.StartsWith("Close"));
                     if (close != null)
                     {
                         var cImg = close.GetComponent<Image>();
-                        if (cImg != null && cImg.sprite != null) CloseButtonSprite = cImg.sprite;
+                        if (cImg != null && cImg.sprite != null)
+                            CloseButtonSprite = cImg.sprite;
                     }
                 }
 
                 // 3. Fallback to popups across the game
                 if (WindowSprite == null)
                 {
-                    var popups = Resources.FindObjectsOfTypeAll<Assets.Behaviour.UI.Shared.UIPopupMenu>();
+                    var popups = FoundationApi.UiAccess.PopupTemplates;
                     foreach (var p in popups)
                     {
                         var img = p.GetComponent<Image>() ?? p.GetComponentInChildren<Image>(true);
@@ -86,7 +86,8 @@ namespace KingdomBottleneckHeatmap
                     var allImgs = Resources.FindObjectsOfTypeAll<Image>();
                     foreach (var img in allImgs)
                     {
-                        if (img == null || img.sprite == null) continue;
+                        if (img == null || img.sprite == null)
+                            continue;
                         string s = img.sprite.name.ToLowerInvariant();
                         if (WindowSprite == null && (s.Contains("window") || s.Contains("dialog") || s.Contains("modal") || s.Contains("frame_bg")))
                             WindowSprite = img.sprite;
@@ -97,7 +98,9 @@ namespace KingdomBottleneckHeatmap
                     }
                 }
             }
-            catch { }
+            catch
+            {
+            }
         }
     }
 }
