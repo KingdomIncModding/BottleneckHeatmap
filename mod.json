@@ -6,9 +6,9 @@
   "description": "For Kingdom Inc game version 1.0.14. Real-time diagnostic heatmap for Kingdom Inc workshops. Color-codes workshop nodes and pipes with semi-transparent overlays to instantly identify running lines, starved machines, clogged bottlenecks, and full storage.",
   "repository": {
     "platform": "GitHub",
-    "owner": "urakkaamyx",
+    "owner": "KingdomIncModding",
     "name": "KingdomInc_BottleneckHeatmap",
-    "url": "https://github.com/urakkaamyx/KingdomInc_BottleneckHeatmap",
+    "url": "https://github.com/KingdomIncModding/KingdomInc_BottleneckHeatmap",
     "branch": "master",
     "visibility": "public",
     "topics": [
@@ -63,7 +63,7 @@
     "gameIntegration": "Foundation"
   },
   "publishing": {
-    "githubReleases": "https://github.com/urakkaamyx/KingdomInc_BottleneckHeatmap/releases/tag/v1.2.6",
+    "githubReleases": "https://github.com/KingdomIncModding/KingdomInc_BottleneckHeatmap/releases/tag/v1.2.6",
     "nexusMods": "https://www.nexusmods.com/kingdominc/mods/21",
     "archivePreviousReleases": false
   }
