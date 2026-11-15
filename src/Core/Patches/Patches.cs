@@ -10,6 +10,22 @@ namespace KingdomBottleneckHeatmap
     internal static class Patches
     {
         public static InputAction HeatmapAction;
+        private static Action<InputAction.CallbackContext> performedHandler;
+
+        public static void CleanupInput()
+        {
+            if (HeatmapAction == null)
+                return;
+            if (performedHandler != null)
+            {
+                HeatmapAction.performed -= performedHandler;
+                performedHandler = null;
+            }
+            FoundationApi.Bindings.RemoveRebindable(HeatmapAction);
+            HeatmapAction.Disable();
+            HeatmapAction.Dispose();
+            HeatmapAction = null;
+        }
         public static void NodeSetElementPostfix(Component __instance)
         {
             if (__instance)
@@ -70,13 +86,13 @@ namespace KingdomBottleneckHeatmap
                     var plugin = global::KingdomBottleneckHeatmap.BottleneckHeatmapPlugin.Instance;
                     string keyName = plugin?.ToggleKeyConfig?.Value.ToString().ToLowerInvariant() ?? "h";
                     HeatmapAction = new InputAction("BottleneckHeatmapToggle", InputActionType.Button, $"<Keyboard>/{keyName}");
-                    HeatmapAction.performed += ctx =>
+                    performedHandler = ctx =>
                     {
-                        if (global::KingdomBottleneckHeatmap.BottleneckHeatmapPlugin.Instance != null && !global::KingdomBottleneckHeatmap.BottleneckHeatmapPlugin.Instance.IsListeningForHotkey)
-                        {
-                            global::KingdomBottleneckHeatmap.BottleneckHeatmapPlugin.Instance.ToggleHeatmapFromHotkey();
-                        }
+                        var pluginInstance = global::KingdomBottleneckHeatmap.BottleneckHeatmapPlugin.Instance;
+                        if (pluginInstance != null && pluginInstance.CanHandleHotkey())
+                            pluginInstance.ToggleHeatmapFromHotkey();
                     };
+                    HeatmapAction.performed += performedHandler;
                     HeatmapAction.Enable();
                 }
 

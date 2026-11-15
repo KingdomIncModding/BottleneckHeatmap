@@ -34,11 +34,12 @@ namespace KingdomBottleneckHeatmap
             _overlayLine.enabled = false;
         }
 
+        const float RejectionHoldSeconds = 0.6f;
         Component _worldPipe;
         LineRenderer _nativeLine;
         LineRenderer _overlayLine;
         float _lastTransferTime = -100f;
-        bool _wasRejected;
+        float _lastRejectedTime = -100f;
         float _nextCheckTime;
         BottleneckState _currentState = BottleneckState.Idle;
         Vector3[] _positionsBuffer = new Vector3[0];
@@ -59,13 +60,13 @@ namespace KingdomBottleneckHeatmap
 
         public void NotifyItemRejected()
         {
-            _wasRejected = true;
+            _lastRejectedTime = Time.time;
             RefreshVisuals(false);
         }
 
         public void NotifyItemTransferred()
         {
-            _wasRejected = false;
+            _lastRejectedTime = -100f;
             _lastTransferTime = Time.time;
             RefreshVisuals(false);
         }
@@ -123,7 +124,12 @@ namespace KingdomBottleneckHeatmap
                 return;
             }
 
-            var newState = BottleneckStateEvaluator.Evaluate(_worldPipe, _lastTransferTime, _wasRejected);
+            var pipe = FoundationApi.WorkspaceVisuals.PipeFromView(_worldPipe);
+            bool hasUpstreamItem = (pipe?.ConnectedOutput?.BufferedItemCount ?? 0) > 0;
+            bool rejectionHoldActive = pipe != null && (pipe.ItemRejected || (hasUpstreamItem && Time.time - _lastRejectedTime <= RejectionHoldSeconds));
+            if (pipe == null || (!pipe.ItemRejected && !hasUpstreamItem))
+                _lastRejectedTime = -100f;
+            var newState = BottleneckStateEvaluator.Evaluate(_worldPipe, _lastTransferTime, rejectionHoldActive);
             if (newState == BottleneckState.Idle && !plugin.ShowIdle && plugin.EnableIdleState)
             {
                 if (_overlayLine.enabled)

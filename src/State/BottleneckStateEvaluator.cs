@@ -7,7 +7,9 @@ namespace KingdomBottleneckHeatmap
 {
     public static class BottleneckStateEvaluator
     {
-        public static BottleneckState Evaluate(Component world)
+        public static BottleneckState Evaluate(Component world) => Evaluate(world, false);
+
+        public static BottleneckState Evaluate(Component world, bool observedManualProgress)
         {
             if (!world || !world.gameObject.activeInHierarchy)
                 return BottleneckState.Idle;
@@ -42,7 +44,7 @@ namespace KingdomBottleneckHeatmap
                 if (!production.HasRecipe)
                     return BottleneckState.Idle;
                 if (production.Crafting || production.HasCraftingInput)
-                    return BottleneckState.Running;
+                    return production.CanAutoCraft || observedManualProgress ? BottleneckState.Running : BottleneckState.Idle;
                 for (int i = 0; i < production.ReagentCount; i++)
                     if (i >= production.InputCount || production.BufferedInputCount(i) < production.ReagentAmount(i))
                         return BottleneckState.Starved;

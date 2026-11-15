@@ -1,8 +1,8 @@
 # Bottleneck Heatmap
 
-**Current release: 1.2.7 — for Kingdom Inc game version 1.0.14.**
+**Current release: 1.2.8 — for Kingdom Inc game version 1.0.14.**
 
-[GitHub releases](https://github.com/KingdomIncModding/BottleneckHeatmap/releases) · [Nexus Mods](https://www.nexusmods.com/kingdominc/mods/21) · Version 1.2.7
+[GitHub releases](https://github.com/KingdomIncModding/BottleneckHeatmap/releases) · [Nexus Mods](https://www.nexusmods.com/kingdominc/mods/21) · Version 1.2.8
 
 Real-time diagnostic heatmap for Kingdom Inc workshops. Color-codes all workshop nodes and connecting pipes with semi-transparent overlays to instantly identify running lines, starved machines, clogged bottlenecks, and full storage containers.
 
@@ -36,7 +36,7 @@ Real-time diagnostic heatmap for Kingdom Inc workshops. Color-codes all workshop
 ## Installation
 
 1. Install [BepInEx 5 (Windows x64 Mono)](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.6).
-2. Install [Foundation](https://www.nexusmods.com/kingdominc/mods/18) (0.14.0 or newer).
+2. Install [Foundation](https://www.nexusmods.com/kingdominc/mods/18) (0.14.4 or newer).
 3. Place `BottleneckHeatmap.dll` into `KingdomInc/BepInEx/plugins/BottleneckHeatmap/`.
 4. Launch the game. Press `H` in any workshop tab to inspect your production lines!
 

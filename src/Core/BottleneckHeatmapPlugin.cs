@@ -2,13 +2,16 @@ using KingdomFoundation.Api;
 using System;
 using BepInEx;
 using BepInEx.Configuration;
+using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 namespace KingdomBottleneckHeatmap
 {
     [BepInPlugin(Id, "Bottleneck Heatmap", Version)]
-    [BepInDependency("urakka.kingdominc.foundation")]
+    [BepInDependency("urakka.kingdominc.foundation", "0.14.4")]
     public sealed class BottleneckHeatmapPlugin : BaseUnityPlugin
     {
         void Awake()
@@ -38,7 +41,7 @@ namespace KingdomBottleneckHeatmap
         }
 
         public const string Id = "urakka.kingdominc.bottleneckheatmap";
-        public const string Version = "1.2.7";
+        public const string Version = "1.2.8";
         public static BottleneckHeatmapPlugin Instance { get; private set; }
         public BepInEx.Logging.ManualLogSource Log => Logger;
 
@@ -76,8 +79,30 @@ namespace KingdomBottleneckHeatmap
         bool _isListeningForHotkey;
         public bool IsListeningForHotkey => _isListeningForHotkey;
 
+        internal bool CanHandleHotkey()
+        {
+            if (_isListeningForHotkey || !Application.isFocused)
+                return false;
+            var ui = FoundationApi.UiAccess;
+            if (!ui.IsGameInputEnabled || !ui.IsWorkspaceVisible || ui.IsMenuVisible || ui.IsAlertVisible || ui.HasPopup || ui.IsTutorialActive)
+                return false;
+            return !IsTextInputFocused();
+        }
+
+        private static bool IsTextInputFocused()
+        {
+            var selected = EventSystem.current ? EventSystem.current.currentSelectedGameObject : null;
+            if (!selected) return false;
+            var tmp = selected.GetComponentInParent<TMP_InputField>();
+            if (tmp && tmp.isFocused) return true;
+            var legacy = selected.GetComponentInParent<InputField>();
+            return legacy && legacy.isFocused;
+        }
+
         public void ToggleHeatmapFromHotkey()
         {
+            if (!CanHandleHotkey())
+                return;
             if (Time.unscaledTime - _lastHotkeyToggleTime < 0.25f)
                 return;
             _lastHotkeyToggleTime = Time.unscaledTime;
@@ -101,12 +126,17 @@ namespace KingdomBottleneckHeatmap
             foreach (var hook in _hooks)
                 hook.Dispose();
             _hooks.Clear();
+            global::KingdomBottleneckHeatmap.Patches.CleanupInput();
             FoundationIntegration.Release();
             HeatmapMaterials.Release();
             foreach (var node in FindObjectsByType<HeatmapNodeOverlay>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-                Destroy(node);
+                if (node && node.gameObject.scene.IsValid())
+                    Destroy(node);
             foreach (var pipe in FindObjectsByType<HeatmapPipeOverlay>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-                Destroy(pipe);
+                if (pipe && pipe.gameObject.scene.IsValid())
+                    Destroy(pipe);
+            if (Instance == this)
+                Instance = null;
         }
 
         public void RefreshAllOverlays()
@@ -249,7 +279,7 @@ namespace KingdomBottleneckHeatmap
             // If native InputAction is active, it handles hotkey via performed callback
             if (global::KingdomBottleneckHeatmap.Patches.HeatmapAction == null || !global::KingdomBottleneckHeatmap.Patches.HeatmapAction.enabled)
             {
-                if (Keyboard.current != null && ToggleKeyConfig != null)
+                if (CanHandleHotkey() && Keyboard.current != null && ToggleKeyConfig != null)
                 {
                     var keyControl = Keyboard.current[ToggleKeyConfig.Value];
                     if (keyControl != null && keyControl.wasPressedThisFrame)

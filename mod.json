@@ -1,7 +1,7 @@
 {
   "id": "BottleneckHeatmap",
   "name": "Bottleneck Heatmap",
-  "version": "1.2.7",
+  "version": "1.2.8",
   "author": "Urakka",
   "description": "For Kingdom Inc game version 1.0.14. Real-time diagnostic heatmap for Kingdom Inc workshops. Color-codes workshop nodes and pipes with semi-transparent overlays to instantly identify running lines, starved machines, clogged bottlenecks, and full storage.",
   "repository": {
@@ -19,7 +19,7 @@
       "diagnostic",
       "heatmap"
     ],
-    "latestTag": "v1.2.6"
+    "latestTag": "v1.2.7"
   },
   "distribution": {
     "nexus": {
@@ -31,8 +31,9 @@
         {
           "name": "Foundation",
           "url": "https://www.nexusmods.com/kingdominc/mods/18",
-          "minimumVersion": "0.14.0",
-          "type": "nexus"
+          "minimumVersion": "0.14.4",
+          "type": "nexus",
+          "fileId": 8358756
         },
         {
           "name": "BepInEx 5",
@@ -63,7 +64,7 @@
     "gameIntegration": "Foundation"
   },
   "publishing": {
-    "githubReleases": "https://github.com/KingdomIncModding/BottleneckHeatmap/releases/tag/v1.2.6",
+    "githubReleases": "https://github.com/KingdomIncModding/BottleneckHeatmap/releases/tag/v1.2.7",
     "nexusMods": "https://www.nexusmods.com/kingdominc/mods/21",
     "archivePreviousReleases": false
   }

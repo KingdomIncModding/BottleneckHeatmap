@@ -46,6 +46,8 @@ namespace KingdomBottleneckHeatmap
         Component _world;
         Image _overlayImage;
         float _nextCheckTime;
+        float _lastObservedProgress = -1f;
+        float _lastProgressAdvanceTime = -100f;
         BottleneckState _currentState = BottleneckState.Idle;
         public BottleneckState CurrentState => _currentState;
 
@@ -88,7 +90,23 @@ namespace KingdomBottleneckHeatmap
                 return;
             }
 
-            var newState = BottleneckStateEvaluator.Evaluate(_world);
+            bool observedManualProgress = false;
+            var production = FoundationApi.WorkspaceAccess.FromView(_world)?.Production;
+            if (production != null && production.IsRecipe)
+            {
+                float progress = production.Progress;
+                if (_lastObservedProgress >= 0f && !production.CanAutoCraft)
+                {
+                    bool advanced = progress > _lastObservedProgress + 0.0001f || (_lastObservedProgress > 0.5f && progress < _lastObservedProgress && (production.Crafting || production.HasCraftingInput));
+                    if (advanced)
+                        _lastProgressAdvanceTime = Time.time;
+                }
+                if (production.CanAutoCraft || (!production.Crafting && !production.HasCraftingInput))
+                    _lastProgressAdvanceTime = -100f;
+                _lastObservedProgress = progress;
+                observedManualProgress = Time.time - _lastProgressAdvanceTime <= 0.65f;
+            }
+            var newState = BottleneckStateEvaluator.Evaluate(_world, observedManualProgress);
             if (newState == BottleneckState.Idle && !plugin.ShowIdle && plugin.EnableIdleState)
             {
                 if (_overlayImage.enabled)
