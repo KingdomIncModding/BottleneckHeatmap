@@ -1,5 +1,7 @@
 # Bottleneck Heatmap
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/S6V62AX30M)
+
 **Current release: 1.2.8 — for Kingdom Inc game version 1.0.14.**
 
 [GitHub releases](https://github.com/KingdomIncModding/BottleneckHeatmap/releases) · [Nexus Mods](https://www.nexusmods.com/kingdominc/mods/21) · Version 1.2.8
@@ -52,3 +54,9 @@ Real-time diagnostic heatmap for Kingdom Inc workshops. Color-codes all workshop
 | WorldFlowManager.ShowFlow | Foundation hook (postfix) | Refreshes node and pipe overlays when switching workshop tabs. |
 | PlayerInput.Awake | Foundation hook (postfix) | Registers the configurable Bottleneck Heatmap toggle action into Kingdom Inc's native input rebinding system. |
 | KeyBindingRow.SetBinding | Foundation hook (postfix) | Displays "Bottleneck Heatmap" as the human-readable label in the in-game key binding menu. |
+
+## Support
+
+If you enjoy these Kingdom Inc mods and tools, consider supporting development on Ko-fi!
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/S6V62AX30M)
